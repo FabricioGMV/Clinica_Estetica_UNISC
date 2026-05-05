@@ -12,8 +12,8 @@ def pacientes():
     lista = paciente_service.listar_pacientes()
     return render_template('pacientes.html', pacientes=lista)
 
-@rotas_bp.route('/pacientes/novo', methods=('GET', 'POST'))
-def novo_pacientes():
+@rotas_bp.route('/paciente/novo', methods=('GET', 'POST'))
+def novo_paciente():
     if request.method == 'POST':
         paciente_service.criar_paciente(request.form)
         
