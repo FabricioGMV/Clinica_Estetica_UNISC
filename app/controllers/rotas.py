@@ -1,17 +1,20 @@
 from flask import Blueprint, render_template, request, redirect, url_for
-from app.services import paciente_service
+from app.services import paciente_service, agendamento_service
 
 rotas_bp = Blueprint('rotas', __name__)
 
+#1. Rota principal
 @rotas_bp.route('/')
 def index():
     return render_template('index.html')
 
+#2. Rota da lista de pacientes
 @rotas_bp.route('/pacientes')
 def pacientes():
     lista = paciente_service.listar_pacientes()
     return render_template('pacientes.html', pacientes=lista)
 
+#3. Rota de criação de pacientes
 @rotas_bp.route('/paciente/novo', methods=('GET', 'POST'))
 def novo_paciente():
     if request.method == 'POST':
@@ -20,3 +23,23 @@ def novo_paciente():
         return redirect(url_for('rotas.pacientes'))
     
     return render_template('form_paciente.html')
+
+#4. Rota para o perfil do paciente
+@rotas_bp.route('/paciente/<int:id>')
+def perfil_paciente(id):
+    paciente = paciente_service.obter_paciente(id)
+    agendamentos = agendamento_service.listar_agendamentos_por_paciente(id)
+
+    return render_template('perfil_paciente.html', paciente=paciente, agendamentos=agendamentos)
+
+#5. Rota para agendar nova consulta
+@rotas_bp.route('/paciente/<int:id>/agendar', methods=['GET', 'POST'])
+def novo_agendamento(id):
+    paciente = paciente_service.obter_paciente(id)
+
+    if request.method == 'POST':
+        agendamento_service.criar_agendamento(request.form, id)
+
+        return redirect(url_for('rotas.perfil_paciente', id=id))
+    
+    return render_template('form_agendamento.html', paciente=paciente)

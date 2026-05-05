@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Perfil - {{ paciente.nome_completo }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/pacientes">← Voltar para Pacientes</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Prontuário do Paciente</h5>
+                    </div>
+                    <div class="card-body">
+                        <h4>{{ paciente.nome_completo }}</h4>
+                        <p class="text-muted">CPF: {{ paciente.cpf }}</p>
+                        <p>Data de Nascimento: {{ paciente.data_nascimento }}</p>
+                        <hr>
+                        <p><strong>Telefone: </strong> <a href="https://wa.me/55{{ paciente.telefone | replace(' ', '') | replace('-', '') | replace('(', '') | replace(')', '') }}" target="_blank">{{ paciente.telefone }}</a></p>
+                        <p><strong>E-mail: </strong> {{ paciente.email }}</p>
+                        <p><strong>Histórico Médico: </strong><br> {{ paciente.historico_medico or 'Nenhum registro.' }}</p>
+                        <p><strong>Termos Assinados: </strong> 
+                            {% if paciente.termo_consentimento %}✅ Termo{% else %}❌ Termo{% endif %} / 
+                            {% if paciente.autorizacao_imagem %}✅ Imagem{% else %}❌ Imagem{% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>Agendamentos e Planos</h3>
+                    <a href="/paciente/{{ paciente.id }}/agendar" class="btn btn-success">+ Novo Agendamento</a>
+                </div>
+
+                {% for agendamento in agendamentos %}
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <h5 class="card-title text-primary">{{ agendamento.tipo_procedimento }}</h5>
+                            <span class="badge {% if agendamento.status == 'Confirmado' %}bg-success{% elif agendamento.status == 'Cancelado' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                {{ agendamento.status }}
+                            </span>
+                        </div>
+                        <h6 class="card-subtitle mb-2 text-muted">Data/Hora: {{ agendamento.data_hora }}</h6>
+                        <p class="card-text">
+                            <strong>Sessões Previstas:</strong> {{ agendamento.sessoes_previstas }}<br>
+                            <strong>Valor:</strong> R$ {{ agendamento.valor_cobrado }} ({{ agendamento.forma_pagamento }})<br>
+                            <strong>Observações:</strong> {{ agendamento.observacoes or 'Nenhuma observação.' }}
+                        </p>
+                        <button class="btn btn-sm btn-outline-primary">Registrar Sessão Realizada (Em Breve)</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-secondary">Nenhum agendamento encontrado para este paciente.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -25,3 +25,10 @@ def listar_pacientes():
     pacientes = conn.execute('SELECT * FROM pacientes ORDER BY nome_completo').fetchall()
     conn.close()
     return pacientes
+
+def obter_paciente(paciente_id):
+    conn = get_db_connection()
+    paciente = conn.execute('SELECT * FROM pacientes WHERE id = ?', (paciente_id,)).fetchone()
+    conn.close()
+
+    return paciente

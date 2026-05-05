@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Novo Agendamento</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">Agendar Consulta: {{ paciente.nome_completo }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label>Data e Hora</label>
+                            <input type="datetime-local" name="data_hora" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label>Status</label>
+                            <select name="status" class="form-control">
+                                <option value="Aguardando">Aguardando</option>
+                                <option value="Confirmado">Confirmado</option>
+                                <option value="Cancelado">Cancelado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label>Procedimento</label>
+                            <select name="tipo_procedimento" class="form-control" required>
+                                <option value="Limpeza de Pele">Limpeza de Pele</option>
+                                <option value="Botox">Botox</option>
+                                <option value="Peeling">Peeling</option>
+                                <option value="Drenagem Linfática">Drenagem Linfática</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label>Sessões Previstas</label>
+                            <input type="number" name="sessoes_previstas" class="form-control" value="1" min="1" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label>Valor Total (R$)</label>
+                            <input type="number" step="0.01" name="valor_cobrado" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label>Forma de Pagamento</label>
+                            <select name="forma_pagamento" class="form-control">
+                                <option value="Pix">Pix</option>
+                                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                                <option value="Cartão de Débito">Cartão de Débito</option>
+                                <option value="Dinheiro">Dinheiro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Observações do Agendamento</label>
+                        <textarea name="observacoes" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-success">Salvar Agendamento</button>
+                    <a href="/paciente/{{ paciente.id }}" class="btn btn-secondary">Cancelar</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
