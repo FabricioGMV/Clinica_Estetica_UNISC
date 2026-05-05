@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request, redirect, url_for
+from app.services import paciente_service
 
 rotas_bp = Blueprint('rotas', __name__)
 
@@ -6,6 +7,16 @@ rotas_bp = Blueprint('rotas', __name__)
 def index():
     return render_template('index.html')
 
-@rotas_bp.route('/')
-def cadastrar_pacientes():
-    return render_template('pacientes')
+@rotas_bp.route('/pacientes')
+def pacientes():
+    lista = paciente_service.listar_pacientes()
+    return render_template('pacientes.html', pacientes=lista)
+
+@rotas_bp.route('/pacientes/novo', methods=('GET', 'POST'))
+def novo_pacientes():
+    if request.method == 'POST':
+        paciente_service.criar_paciente(request.form)
+        
+        return redirect(url_for('rotas.pacientes'))
+    
+    return render_template('form_paciente.html')
