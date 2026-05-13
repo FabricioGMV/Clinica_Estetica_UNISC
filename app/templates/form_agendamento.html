@@ -2,38 +2,38 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Novo Agendamento</title>
+    <title>{{ 'Editar' if agendamento else 'Novo' }} Agendamento</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
     <div class="container mt-5">
         <div class="card shadow-sm">
             <div class="card-header bg-success text-white">
-                <h4 class="mb-0">Agendar Consulta: {{ paciente.nome_completo }}</h4>
+                <h4 class="mb-0">{{ 'Editar Agendamento' if agendamento else 'Agendar Consulta' }}: {{ paciente.nome_completo }}</h4>
             </div>
             <div class="card-body">
                 <form method="POST">
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label>Data e Hora</label>
-                            <input type="datetime-local" name="data_hora" class="form-control" required>
+                            <input type="datetime-local" name="data_hora" class="form-control" value="{{ agendamento.data_hora if agendamento else '' }}" required>
                         </div>
                         <div class="col-md-4">
                             <label>Status</label>
                             <select name="status" class="form-control">
-                                <option value="Aguardando">Aguardando</option>
-                                <option value="Confirmado">Confirmado</option>
-                                <option value="Cancelado">Cancelado</option>
+                                <option value="Aguardando" {% if agendamento and agendamento.status == 'Aguardando' %}selected{% endif %}>Aguardando</option>
+                                <option value="Confirmado" {% if agendamento and agendamento.status == 'Confirmado' %}selected{% endif %}>Confirmado</option>
+                                <option value="Cancelado" {% if agendamento and agendamento.status == 'Cancelado' %}selected{% endif %}>Cancelado</option>
                             </select>
                         </div>
                         <div class="col-md-4">
                             <label>Procedimento</label>
                             <select name="tipo_procedimento" class="form-control" required>
-                                <option value="Limpeza de Pele">Limpeza de Pele</option>
-                                <option value="Botox">Botox</option>
-                                <option value="Peeling">Peeling</option>
-                                <option value="Drenagem Linfática">Drenagem Linfática</option>
-                                <option value="Outro">Outro</option>
+                                <option value="Limpeza de Pele" {% if agendamento and agendamento.tipo_procedimento == 'Limpeza de Pele' %}selected{% endif %}>Limpeza de Pele</option>
+                                <option value="Botox" {% if agendamento and agendamento.tipo_procedimento == 'Botox' %}selected{% endif %}>Botox</option>
+                                <option value="Peeling" {% if agendamento and agendamento.tipo_procedimento == 'Peeling' %}selected{% endif %}>Peeling</option>
+                                <option value="Drenagem Linfática" {% if agendamento and agendamento.tipo_procedimento == 'Drenagem Linfática' %}selected{% endif %}>Drenagem Linfática</option>
+                                <option value="Outro" {% if agendamento and agendamento.tipo_procedimento == 'Outro' %}selected{% endif %}>Outro</option>
                             </select>
                         </div>
                     </div>
@@ -41,29 +41,29 @@
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label>Sessões Previstas</label>
-                            <input type="number" name="sessoes_previstas" class="form-control" value="1" min="1" required>
+                            <input type="number" name="sessoes_previstas" class="form-control" value="{{ agendamento.sessoes_previstas if agendamento else '1' }}" min="1" required>
                         </div>
                         <div class="col-md-4">
                             <label>Valor Total (R$)</label>
-                            <input type="number" step="0.01" name="valor_cobrado" class="form-control" required>
+                            <input type="number" step="0.01" name="valor_cobrado" class="form-control" value="{{ agendamento.valor_cobrado if agendamento else '' }}" required>
                         </div>
                         <div class="col-md-4">
                             <label>Forma de Pagamento</label>
                             <select name="forma_pagamento" class="form-control">
-                                <option value="Pix">Pix</option>
-                                <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                <option value="Cartão de Débito">Cartão de Débito</option>
-                                <option value="Dinheiro">Dinheiro</option>
+                                <option value="Pix" {% if agendamento and agendamento.forma_pagamento == 'Pix' %}selected{% endif %}>Pix</option>
+                                <option value="Cartão de Crédito" {% if agendamento and agendamento.forma_pagamento == 'Cartão de Crédito' %}selected{% endif %}>Cartão de Crédito</option>
+                                <option value="Cartão de Débito" {% if agendamento and agendamento.forma_pagamento == 'Cartão de Débito' %}selected{% endif %}>Cartão de Débito</option>
+                                <option value="Dinheiro" {% if agendamento and agendamento.forma_pagamento == 'Dinheiro' %}selected{% endif %}>Dinheiro</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label>Observações do Agendamento</label>
-                        <textarea name="observacoes" class="form-control" rows="2"></textarea>
+                        <textarea name="observacoes" class="form-control" rows="2">{{ agendamento.observacoes if agendamento else '' }}</textarea>
                     </div>
 
-                    <button type="submit" class="btn btn-success">Salvar Agendamento</button>
+                    <button type="submit" class="btn btn-success">Salvar</button>
                     <a href="/paciente/{{ paciente.id }}" class="btn btn-secondary">Cancelar</a>
                 </form>
             </div>

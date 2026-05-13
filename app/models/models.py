@@ -25,6 +25,7 @@ def init_db():
             paciente_id INTEGER,
             data_hora DATETIME,
             status TEXT,
+            status_pagamento TEXT DEFAULT 'Aguardando',
             tipo_procedimento TEXT,
             sessoes_previstas INTEGER,
             valor_cobrado REAL,

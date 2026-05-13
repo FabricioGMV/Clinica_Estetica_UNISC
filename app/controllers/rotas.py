@@ -43,3 +43,32 @@ def novo_agendamento(id):
         return redirect(url_for('rotas.perfil_paciente', id=id))
     
     return render_template('form_agendamento.html', paciente=paciente)
+
+#6. Rota para editar paciente
+@rotas_bp.route('/paciente/<int:id>/editar', methods=['GET', 'POST'])
+def editar_paciente(id):
+    paciente = paciente_service.obter_paciente(id)
+    if request.method == 'POST':
+        paciente_service.atualizar_pacientes(id, request.form)
+
+        return redirect(url_for('rotas.perfil_paciente', id=id))
+    
+    return render_template('form_paciente.html', paciente=paciente)
+
+#7. Rota para editar agendamento
+@rotas_bp.route('/agendamento/<int:id>/editar', methods=['GET', 'POST'])
+def editar_agendamento(id):
+    agendamento = agendamento_service.obter_agendamento(id)
+    if request.method == 'POST':
+        agendamento_service.atualizar_agendamento(id, request.form)
+        
+        return redirect(url_for('rotas.perfil_paciente', id=agendamento['paciente_id']))
+    
+    return render_template('form_agendamento.html', agendamento=agendamento, paciente=paciente_service.obter_paciente(agendamento['paciente_id']))
+
+#8. Rota para editar pagamento do agendamento
+@rotas_bp.route('/agendamento/<int:id>/pagar', methods=['POST'])
+def pagar_agendamento(id):
+    agendamento = agendamento_service.obter_agendamento(id)
+    agendamento_service.confirmar_pagamento_e_agendamento(id)
+    return redirect(url_for('rotas.perfil_paciente', id=agendamento['paciente_id']))

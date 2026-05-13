@@ -16,18 +16,18 @@
         <div class="row">
             <div class="col-md-4 mb-4">
                 <div class="card shadow-sm border-primary">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Prontuário do Paciente</h5>
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Prontuário</h5>
+                        <a href="/paciente/{{ paciente.id }}/editar" class="btn btn-sm btn-light text-primary">✏️ Editar</a>
                     </div>
                     <div class="card-body">
                         <h4>{{ paciente.nome_completo }}</h4>
                         <p class="text-muted">CPF: {{ paciente.cpf }}</p>
-                        <p>Data de Nascimento: {{ paciente.data_nascimento }}</p>
                         <hr>
-                        <p><strong>Telefone: </strong> <a href="https://wa.me/55{{ paciente.telefone | replace(' ', '') | replace('-', '') | replace('(', '') | replace(')', '') }}" target="_blank">{{ paciente.telefone }}</a></p>
-                        <p><strong>E-mail: </strong> {{ paciente.email }}</p>
-                        <p><strong>Histórico Médico: </strong><br> {{ paciente.historico_medico or 'Nenhum registro.' }}</p>
-                        <p><strong>Termos Assinados: </strong> 
+                        <p><strong>Telefone:</strong> <a href="https://wa.me/55{{ paciente.telefone | replace(' ', '') | replace('-', '') | replace('(', '') | replace(')', '') }}" target="_blank">{{ paciente.telefone }}</a></p>
+                        <p><strong>E-mail:</strong> {{ paciente.email }}</p>
+                        <p><strong>Histórico Médico:</strong><br> {{ paciente.historico_medico or 'Nenhum registro.' }}</p>
+                        <p><strong>Termos Assinados:</strong> 
                             {% if paciente.termo_consentimento %}✅ Termo{% else %}❌ Termo{% endif %} / 
                             {% if paciente.autorizacao_imagem %}✅ Imagem{% else %}❌ Imagem{% endif %}
                         </p>
@@ -44,19 +44,52 @@
                 {% for agendamento in agendamentos %}
                 <div class="card shadow-sm mb-3">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between">
+                        <div class="d-flex justify-content-between mb-2">
                             <h5 class="card-title text-primary">{{ agendamento.tipo_procedimento }}</h5>
-                            <span class="badge {% if agendamento.status == 'Confirmado' %}bg-success{% elif agendamento.status == 'Cancelado' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
-                                {{ agendamento.status }}
-                            </span>
+                            <div>
+                                <span class="badge {% if agendamento.status == 'Confirmado' %}bg-success{% elif agendamento.status == 'Cancelado' %}bg-danger{% else %}bg-warning text-dark{% endif %} me-2">
+                                    Status: {{ agendamento.status }}
+                                </span>
+                                <a href="/agendamento/{{ agendamento.id }}/editar" class="btn btn-sm btn-outline-secondary">✏️ Editar</a>
+                            </div>
                         </div>
-                        <h6 class="card-subtitle mb-2 text-muted">Data/Hora: {{ agendamento.data_hora }}</h6>
-                        <p class="card-text">
-                            <strong>Sessões Previstas:</strong> {{ agendamento.sessoes_previstas }}<br>
-                            <strong>Valor:</strong> R$ {{ agendamento.valor_cobrado }} ({{ agendamento.forma_pagamento }})<br>
-                            <strong>Observações:</strong> {{ agendamento.observacoes or 'Nenhuma observação.' }}
-                        </p>
-                        <button class="btn btn-sm btn-outline-primary">Registrar Sessão Realizada (Em Breve)</button>
+                        
+                        <h6 class="card-subtitle mb-3 text-muted">Data/Hora: {{ agendamento.data_hora }}</h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Sessões Previstas:</strong> {{ agendamento.sessoes_previstas }}<br>
+                                <strong>Observações:</strong> {{ agendamento.observacoes or 'Nenhuma observação.'}}
+                            </div>
+                            <div class="col-md-6 bg-light p-2 rounded border">
+                                <strong>Valor:</strong> R$ {{ agendamento.valor_cobrado }} ({{ agendamento.forma_pagamento }})<br>
+                                <strong>Pagamento:</strong> 
+                                {% if agendamento.status_pagamento == 'Aguardando' %}
+                                    <span class="text-danger fw-bold">Aguardando</span>
+                                    {% if agendamento.status != 'Cancelado' %}
+                                    <form action="/agendamento/{{ agendamento.id }}/pagar" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-success py-0 px-1 ms-2">Marcar como Pago</button>
+                                    </form>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-success fw-bold">✅ Pago</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% set pode_realizar = (agendamento.status == 'Confirmado' and agendamento.status_pagamento == 'Pago') %}
+                        
+                        <button class="btn btn-sm btn-primary w-100 mt-2" {% if not pode_realizar %} disabled {% endif %}>
+                            Registrar Sessão Realizada (Em Breve)
+                        </button>
+                        
+                        {% if agendamento.status == 'Cancelado' %}
+                            <small class="text-danger mt-1 d-block text-center">🚫 Agendamento cancelado. Não é possível realizar a sessão.</small>
+                        {% elif agendamento.status_pagamento != 'Pago' %}
+                            <small class="text-warning text-dark mt-1 d-block text-center">O pagamento precisa constar como "Pago" para realizar a sessão.</small>
+                        {% elif agendamento.status != 'Confirmado' %}
+                            <small class="text-warning text-dark mt-1 d-block text-center">O agendamento precisa estar com status "Confirmado" para realizar a sessão..</small>
+                        {% endif %}
                     </div>
                 </div>
                 {% else %}
