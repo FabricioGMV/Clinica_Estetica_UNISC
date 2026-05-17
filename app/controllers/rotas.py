@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for
 from app.services import paciente_service, agendamento_service, procedimento_service
+from app.database import get_db_connection
 
 rotas_bp = Blueprint('rotas', __name__)
 
@@ -67,12 +68,24 @@ def editar_paciente(id):
 @rotas_bp.route('/agendamento/<int:id>/editar', methods=['GET', 'POST'])
 def editar_agendamento(id):
     agendamento = agendamento_service.obter_agendamento(id)
-    if request.method == 'POST':
-        agendamento_service.atualizar_agendamento(id, request.form)
-        
-        return redirect(url_for('rotas.perfil_paciente', id=agendamento['paciente_id']))
+    paciente = paciente_service.obter_paciente(agendamento['paciente_id'])
     
-    return render_template('form_agendamento.html', agendamento=agendamento, paciente=paciente_service.obter_paciente(agendamento['paciente_id']))
+    if request.method == 'POST':
+        dados_form = dict(request.form)
+        
+        # REMOVIDO: A trava que forçava "Finalizado" foi tirada.
+        # Agora ele salva exatamente como "Cancelado", do jeito que a tela de perfil espera.
+        
+        agendamento_service.atualizar_agendamento(id, dados_form)
+        
+        return redirect(url_for('rotas.perfil_paciente', id=paciente['id']))
+    
+    # --- Parte do GET (carregar a tela) ---
+    conn = get_db_connection()
+    qtd_sessoes = conn.execute('SELECT COUNT(*) FROM procedimentos WHERE agendamento_id = ?', (id,)).fetchone()[0]
+    conn.close()
+    
+    return render_template('form_agendamento.html', agendamento=agendamento, paciente=paciente, qtd_sessoes=qtd_sessoes)
 
 #8. Rota para editar pagamento do agendamento
 @rotas_bp.route('/agendamento/<int:id>/pagar', methods=['POST'])
@@ -92,3 +105,16 @@ def registrar_sessao(id):
         return redirect(url_for('rotas.perfil_paciente', id=paciente['id']))
 
     return render_template('form_procedimento.html', agendamento=agendamento, paciente=paciente)
+
+# 10. Rota inteligente para Finalizar ou Cancelar via botões rápidos (Modal do perfil)
+@rotas_bp.route('/agendamento/<int:id>/mudar_status/<novo_status>', methods=['POST'])
+def mudar_status_agendamento(id, novo_status):
+    conn = get_db_connection()
+    agendamento = conn.execute('SELECT paciente_id FROM agendamentos WHERE id = ?', (id,)).fetchone()
+    
+    # Removemos a conversão forçada aqui também para manter o padrão
+    conn.execute('UPDATE agendamentos SET status = ? WHERE id = ?', (novo_status, id))
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('rotas.perfil_paciente', id=agendamento['paciente_id']))
