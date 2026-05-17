@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Perfil - {{ paciente.nome_completo }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/pacientes">← Voltar para Pacientes</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm border-primary">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Prontuário</h5>
+                        <a href="/paciente/{{ paciente.id }}/editar" class="btn btn-sm btn-light text-primary">Editar</a>
+                    </div>
+                    <div class="card-body">
+                        <h4>{{ paciente.nome_completo }}</h4>
+                        <p class="text-muted">CPF: {{ paciente.cpf }}</p>
+                        <hr>
+                        <p><strong>Telefone:</strong> <a href="https://wa.me/55{{ paciente.telefone | replace(' ', '') | replace('-', '') | replace('(', '') | replace(')', '') }}" target="_blank">{{ paciente.telefone }}</a></p>
+                        <p><strong>E-mail:</strong> {{ paciente.email }}</p>
+                        <p><strong>Histórico Médico:</strong><br> {{ paciente.historico_medico or 'Nenhum registro.' }}</p>
+                        <p><strong>Termos Assinados:</strong> 
+                            {% if paciente.termo_consentimento %}✅ Termo{% else %}❌ Termo{% endif %} / 
+                            {% if paciente.autorizacao_imagem %}✅ Imagem{% else %}❌ Imagem{% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>Agendamentos e Histórico</h3>
+                    <a href="/paciente/{{ paciente.id }}/agendar" class="btn btn-success">+ Novo Agendamento</a>
+                </div>
+
+                {% for item in agendamentos %}
+                {% set agendamento = item.dados %}
+                {% set qtd_sessoes = item.sessoes|length %}
+                
+                <div class="card shadow-sm mb-4 border-secondary">
+                    <div class="card-body">
+                        
+                        <div class="d-flex justify-content-between mb-2">
+                            <h5 class="card-title text-primary">{{ agendamento.tipo_procedimento }}</h5>
+                            <div>
+                                <span class="badge {% if agendamento.status == 'Confirmado' %}bg-success{% elif agendamento.status == 'Cancelado' %}bg-danger{% elif agendamento.status == 'Finalizado' %}bg-dark{% else %}bg-warning text-dark{% endif %} me-2">
+                                    Status: {{ agendamento.status }}
+                                </span>
+                                
+                                {% if agendamento.status not in ['Cancelado', 'Finalizado'] %}
+                                    <a href="/agendamento/{{ agendamento.id }}/editar" class="btn btn-sm btn-outline-secondary me-1">Editar</a>
+                                    
+                                    {% if qtd_sessoes > 0 %}
+                                    <button type="button" class="btn btn-sm btn-dark" data-bs-toggle="modal" data-bs-target="#modalFinalizar" onclick="prepararFinalizacao('{{ agendamento.id }}')">
+                                        Finalizar
+                                    </button>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <h6 class="card-subtitle mb-3 text-muted">Data Agendada: {{ agendamento.data_hora }}</h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Sessões Realizadas:</strong> {{ qtd_sessoes }} de {{ agendamento.sessoes_previstas }} previstas<br>
+                                <strong>Observações:</strong> {{ agendamento.observacoes or 'Nenhuma observação.'}}
+                            </div>
+                            <div class="col-md-6 bg-light p-2 rounded border">
+                                <strong>Valor:</strong> R$ {{ agendamento.valor_cobrado }} ({{ agendamento.forma_pagamento }})<br>
+                                <strong>Pagamento:</strong> 
+                                {% if agendamento.status_pagamento == 'Aguardando' %}
+                                    <span class="text-danger fw-bold">Aguardando</span>
+                                    {% if agendamento.status not in ['Cancelado', 'Finalizado'] %}
+                                    <form action="/agendamento/{{ agendamento.id }}/pagar" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-success py-0 px-1 ms-2">Pago</button>
+                                    </form>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-success fw-bold">✅ Pago</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% set pago = (agendamento.status_pagamento == 'Pago') %}
+                        {% set status_valido = (agendamento.status == 'Confirmado') or (agendamento.status == 'Aguardando' and qtd_sessoes > 0) %}
+                        {% set nao_encerrado = (agendamento.status not in ['Cancelado', 'Finalizado']) %}
+                        {% set pode_realizar = (pago and status_valido and nao_encerrado) %}
+                        
+                        {% if pode_realizar %}
+                        <a href="/agendamento/{{ agendamento.id }}/registrar_sessao" class="btn btn-sm btn-primary w-100 mt-2">
+                            Registrar Sessão Realizada
+                        </a>
+                        {% else %}
+                        <button class="btn btn-sm btn-secondary w-100 mt-2" disabled>Registrar Sessão Realizada</button>
+                        {% endif %}
+
+                        {% if agendamento.status == 'Cancelado' %}
+                            <small class="text-danger mt-1 d-block text-center">🚫 Agendamento cancelado. Não é possível realizar a sessão.</small>
+                        {% elif agendamento.status == 'Finalizado' %}
+                            <small class="text-success mt-1 d-block text-center">✅ Procedimento finalizado. Nenhuma sessão adicional pode ser registrada.</small>
+                        {% elif not pago %}
+                            <small class="text-warning text-dark mt-1 d-block text-center">⚠️ O pagamento precisa constar como "Pago" para realizar a sessão.</small>
+                        {% elif not status_valido %}
+                            <small class="text-warning text-dark mt-1 d-block text-center">⚠️ O agendamento precisa estar com status "Confirmado" para iniciar a primeira sessão.</small>
+                        {% endif %}
+
+                        {% if qtd_sessoes > 0 %}
+                        <hr class="mt-4 mb-3">
+                        <h6 class="text-success fw-bold">Linha do Tempo de Atendimentos:</h6>
+                        <div class="mt-2">
+                            {% for sessao in item.sessoes %}
+                            <div class="p-3 mb-2 bg-light rounded border-start border-success border-4">
+                                <div class="d-flex justify-content-between">
+                                    <strong>Sessão {{ sessao.numero_sessao }}</strong>
+                                    <small class="text-muted">{{ sessao.data_hora_iniciado }}</small>
+                                </div>
+                                <p class="mb-1 mt-1"><small><strong>Ações:</strong> {{ sessao.acoes_realizadas }}</small></p>
+                                <p class="mb-1"><small><strong>Equipe:</strong> Aluno {{ sessao.aluno_responsavel }} | Prof. {{ sessao.professor_supervisor }}</small></p>
+                                {% if sessao.observacao_final %}
+                                <p class="mb-1 text-primary"><small><strong>Nota Final:</strong> {{ sessao.observacao_final }}</small></p>
+                                {% endif %}
+                                
+                                <div class="mt-2 d-flex gap-2">
+                                    {% if sessao.foto_antes %}
+                                    <div>
+                                        <small class="d-block text-muted">Antes:</small>
+                                        <a href="/static/uploads/{{ sessao.foto_antes }}" target="_blank">
+                                            <img src="/static/uploads/{{ sessao.foto_antes }}" class="img-thumbnail" style="height: 60px;">
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                    {% if sessao.foto_depois %}
+                                    <div>
+                                        <small class="d-block text-muted">Depois:</small>
+                                        <a href="/static/uploads/{{ sessao.foto_depois }}" target="_blank">
+                                            <img src="/static/uploads/{{ sessao.foto_depois }}" class="img-thumbnail" style="height: 60px;">
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-secondary">Nenhum agendamento encontrado para este paciente.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalFinalizar" tabindex="-1" aria-labelledby="modalFinalizarLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalFinalizarLabel">Encerrar Procedimentos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Tem certeza que deseja encerrar os procedimentos? Ao finalizar não será possível registrar novas sessões depois disso.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <form id="formFinalizarModal" method="POST" action="">
+                        <button type="submit" class="btn btn-dark">Confirmar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Função para injetar o ID correto no form do Modal
+        function prepararFinalizacao(agendamentoId) {
+            document.getElementById('formFinalizarModal').action = "/agendamento/" + agendamentoId + "/mudar_status/Finalizado";
+        }
+    </script>
+</body>
+</html>
