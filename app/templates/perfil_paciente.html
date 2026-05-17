@@ -18,7 +18,7 @@
                 <div class="card shadow-sm border-primary">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Prontuário</h5>
-                        <a href="/paciente/{{ paciente.id }}/editar" class="btn btn-sm btn-light text-primary">✏️ Editar</a>
+                        <a href="/paciente/{{ paciente.id }}/editar" class="btn btn-sm btn-light text-primary">Editar</a>
                     </div>
                     <div class="card-body">
                         <h4>{{ paciente.nome_completo }}</h4>
@@ -37,12 +37,13 @@
 
             <div class="col-md-8">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h3>Agendamentos e Planos</h3>
-                    <a href="/paciente/{{ paciente.id }}/agendar" class="btn btn-success">+ Novo Agendamento</a>
+                    <h3>Agendamentos e Histórico</h3>
+                    <a href="/paciente/{{ paciente.id }}/agendar" class="btn btn-success">Novo Agendamento</a>
                 </div>
 
-                {% for agendamento in agendamentos %}
-                <div class="card shadow-sm mb-3">
+                {% for item in agendamentos %}
+                {% set agendamento = item.dados %}
+                <div class="card shadow-sm mb-4 border-secondary">
                     <div class="card-body">
                         <div class="d-flex justify-content-between mb-2">
                             <h5 class="card-title text-primary">{{ agendamento.tipo_procedimento }}</h5>
@@ -50,15 +51,15 @@
                                 <span class="badge {% if agendamento.status == 'Confirmado' %}bg-success{% elif agendamento.status == 'Cancelado' %}bg-danger{% else %}bg-warning text-dark{% endif %} me-2">
                                     Status: {{ agendamento.status }}
                                 </span>
-                                <a href="/agendamento/{{ agendamento.id }}/editar" class="btn btn-sm btn-outline-secondary">✏️ Editar</a>
+                                <a href="/agendamento/{{ agendamento.id }}/editar" class="btn btn-sm btn-outline-secondary">Editar</a>
                             </div>
                         </div>
                         
-                        <h6 class="card-subtitle mb-3 text-muted">Data/Hora: {{ agendamento.data_hora }}</h6>
+                        <h6 class="card-subtitle mb-3 text-muted">Data Agendada: {{ agendamento.data_hora }}</h6>
                         
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <strong>Sessões Previstas:</strong> {{ agendamento.sessoes_previstas }}<br>
+                                <strong>Sessões Realizadas:</strong> {{ item.sessoes|length }} de {{ agendamento.sessoes_previstas }} previstas<br>
                                 <strong>Observações:</strong> {{ agendamento.observacoes or 'Nenhuma observação.'}}
                             </div>
                             <div class="col-md-6 bg-light p-2 rounded border">
@@ -68,7 +69,7 @@
                                     <span class="text-danger fw-bold">Aguardando</span>
                                     {% if agendamento.status != 'Cancelado' %}
                                     <form action="/agendamento/{{ agendamento.id }}/pagar" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-success py-0 px-1 ms-2">Marcar como Pago</button>
+                                        <button type="submit" class="btn btn-sm btn-success py-0 px-1 ms-2">Pago</button>
                                     </form>
                                     {% endif %}
                                 {% else %}
@@ -79,10 +80,14 @@
 
                         {% set pode_realizar = (agendamento.status == 'Confirmado' and agendamento.status_pagamento == 'Pago') %}
                         
-                        <button class="btn btn-sm btn-primary w-100 mt-2" {% if not pode_realizar %} disabled {% endif %}>
-                            Registrar Sessão Realizada (Em Breve)
-                        </button>
-                        
+                        {% if pode_realizar %}
+                        <a href="/agendamento/{{ agendamento.id }}/registrar_sessao" class="btn btn-sm btn-primary w-100 mt-2">
+                            Registrar Sessão Realizada
+                        </a>
+                        {% else %}
+                        <button class="btn btn-sm btn-secondary w-100 mt-2" disabled>Registrar Sessão Realizada</button>
+                        {% endif %}
+
                         {% if agendamento.status == 'Cancelado' %}
                             <small class="text-danger mt-1 d-block text-center">🚫 Agendamento cancelado. Não é possível realizar a sessão.</small>
                         {% elif agendamento.status_pagamento != 'Pago' %}
@@ -90,6 +95,46 @@
                         {% elif agendamento.status != 'Confirmado' %}
                             <small class="text-warning text-dark mt-1 d-block text-center">O agendamento precisa estar com status "Confirmado" para realizar a sessão..</small>
                         {% endif %}
+
+                        {% if item.sessoes %}
+                        <hr class="mt-4 mb-3">
+                        <h6 class="text-success fw-bold">Linha do Tempo de Atendimentos:</h6>
+                        <div class="mt-2">
+                            {% for sessao in item.sessoes %}
+                            <div class="p-3 mb-2 bg-light rounded border-start border-success border-4">
+                                <div class="d-flex justify-content-between">
+                                    <strong>Sessão {{ sessao.numero_sessao }}</strong>
+                                    <small class="text-muted">{{ sessao.data_hora_iniciado }}</small>
+                                </div>
+                                <p class="mb-1 mt-1"><small><strong>Ações:</strong> {{ sessao.acoes_realizadas }}</small></p>
+                                <p class="mb-1"><small><strong>Equipe:</strong> Aluno {{ sessao.aluno_responsavel }} | Prof. {{ sessao.professor_supervisor }}</small></p>
+                                {% if sessao.observacao_final %}
+                                <p class="mb-1 text-primary"><small><strong>Nota Final:</strong> {{ sessao.observacao_final }}</small></p>
+                                {% endif %}
+                                
+                                <div class="mt-2 d-flex gap-2">
+                                    {% if sessao.foto_antes %}
+                                    <div>
+                                        <small class="d-block text-muted">Antes:</small>
+                                        <a href="/static/uploads/{{ sessao.foto_antes }}" target="_blank">
+                                            <img src="/static/uploads/{{ sessao.foto_antes }}" class="img-thumbnail" style="height: 60px;">
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                    {% if sessao.foto_depois %}
+                                    <div>
+                                        <small class="d-block text-muted">Depois:</small>
+                                        <a href="/static/uploads/{{ sessao.foto_depois }}" target="_blank">
+                                            <img src="/static/uploads/{{ sessao.foto_depois }}" class="img-thumbnail" style="height: 60px;">
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
                     </div>
                 </div>
                 {% else %}

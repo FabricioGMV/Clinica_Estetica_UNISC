@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for
-from app.services import paciente_service, agendamento_service
+from app.services import paciente_service, agendamento_service, procedimento_service
 
 rotas_bp = Blueprint('rotas', __name__)
 
@@ -28,7 +28,15 @@ def novo_paciente():
 @rotas_bp.route('/paciente/<int:id>')
 def perfil_paciente(id):
     paciente = paciente_service.obter_paciente(id)
-    agendamentos = agendamento_service.listar_agendamentos_por_paciente(id)
+    agendamentos_brutos = agendamento_service.listar_agendamentos_por_paciente(id)
+
+    agendamentos = []
+    for ag in agendamentos_brutos:
+        sessoes = agendamento_service.listar_procedimentos_por_agendamento(ag['id'])
+        agendamentos.append({
+            'dados': ag,
+            'sessoes': sessoes
+        })
 
     return render_template('perfil_paciente.html', paciente=paciente, agendamentos=agendamentos)
 
@@ -72,3 +80,15 @@ def pagar_agendamento(id):
     agendamento = agendamento_service.obter_agendamento(id)
     agendamento_service.confirmar_pagamento_e_agendamento(id)
     return redirect(url_for('rotas.perfil_paciente', id=agendamento['paciente_id']))
+
+#9. Rota para registrar sessão
+@rotas_bp.route('/agendamento/<int:id>/registrar_sessao', methods=['GET', 'POST'])
+def registrar_sessao(id):
+    agendamento = agendamento_service.obter_agendamento(id)
+    paciente = paciente_service.obter_paciente(agendamento['paciente_id'])
+
+    if request.method == 'POST':
+        procedimento_service.registrar_procedimento(id, paciente['id'], request.form, request.files)
+        return redirect(url_for('rotas.perfil_paciente', id=paciente['id']))
+
+    return render_template('form_procedimento.html', agendamento=agendamento, paciente=paciente)

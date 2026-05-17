@@ -54,3 +54,9 @@ def confirmar_pagamento_e_agendamento(agendamento_id):
     ''', (agendamento_id,))
     conn.commit()
     conn.close()
+
+def listar_procedimentos_por_agendamento(agendamento_id):
+    conn = get_db_connection()
+    procedimentos = conn.execute('SELECT * FROM procedimentos WHERE agendamento_id = ? ORDER BY numero_sessao ASC', (agendamento_id,)).fetchall()
+    conn.close()
+    return procedimentos
