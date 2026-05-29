@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Sessões - {{ agendamento.tipo_procedimento }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="/paciente/{{ paciente.id }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar para o Perfil do Paciente</a>
+</div>
+
+<div class="card shadow-sm mb-4 border-info">
+    <div class="card-header bg-info text-dark d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Histórico de Sessões: {{ agendamento.tipo_procedimento }}</h4>
+        <span class="badge bg-dark">Tratamento {{ agendamento.status }}</span>
+    </div>
+    <div class="card-body bg-light">
+        <div class="row">
+            <div class="col-md-4">
+                <p class="mb-1"><strong>Paciente:</strong> {{ paciente.nome_completo }}</p>
+            </div>
+            <div class="col-md-4">
+                <p class="mb-1"><strong>Sessões Realizadas:</strong> {{ sessoes|length }} de {{ agendamento.sessoes_previstas }}</p>
+            </div>
+            <div class="col-md-4 text-end">
+                {% if agendamento.status not in ['Finalizado', 'Cancelado'] %}
+                <a href="/agendamento/{{ agendamento.id }}/registrar_sessao" class="btn btn-sm btn-primary">Registrar Nova Sessão</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {% if sessoes %}
+        {% for sessao in sessoes %}
+        <div class="col-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Sessão #{{ sessao.numero_sessao }}</h5>
+                    <small>Executada em: {{ sessao.data_hora_iniciado[:10] }}</small>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Início:</strong> {{ sessao.data_hora_iniciado }}<br>
+                            <strong>Fim:</strong> {{ sessao.data_hora_finalizacao }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Aluno(a):</strong> {{ sessao.aluno_responsavel }}<br>
+                            <strong>Supervisor(a):</strong> {{ sessao.professor_supervisor }}
+                        </div>
+                        <div class="col-md-4 text-end">
+                            {% if sessao.data_hora_retorno %}
+                                <div class="p-2 border rounded {{ 'bg-warning-subtle border-warning' if sessao.status_retorno == 'Agendado' else 'bg-success-subtle border-success' }}">
+                                    <strong>Próximo Retorno:</strong><br> 
+                                    {{ sessao.data_hora_retorno }}<br>
+                                    <span class="badge {{ 'bg-warning text-dark' if sessao.status_retorno == 'Agendado' else 'bg-success' }}">
+                                        Status: {{ sessao.status_retorno }}
+                                    </span>
+                                    
+                                    {% if sessao.status_retorno == 'Agendado' %}
+                                    <div class="mt-2 text-start">
+                                        <button class="btn btn-xs btn-outline-dark w-100" data-bs-toggle="collapse" data-bs-target="#editRetorno{{ sessao.id }}">Alterar Data</button>
+                                        <div class="collapse mt-2" id="editRetorno{{ sessao.id }}">
+                                            <form action="/sessao/{{ sessao.id }}/editar_retorno" method="POST">
+                                                <input type="datetime-local" name="data_hora_retorno" class="form-control form-control-sm mb-1" required>
+                                                <button type="submit" class="btn btn-sm btn-dark w-100">Salvar Nova Data</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <span class="text-muted fst-italic">Nenhum retorno agendado.</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6 class="border-bottom pb-1">Ações Realizadas</h6>
+                        <p class="text-muted">{{ sessao.acoes_realizadas }}</p>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-1">Receitas e Recomendações</h6>
+                            <p class="text-muted">{{ sessao.receitas_recomendadas or 'Nenhuma recomendação.' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-1">Observações da Execução</h6>
+                            <p class="text-muted">{{ sessao.observacoes_execucao or 'Sem intercorrências.' }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-success py-2 mb-0">
+                        <strong>Evolução / Obs Final:</strong> {{ sessao.observacao_final }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">Nenhuma sessão executada para este procedimento até o momento.</div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

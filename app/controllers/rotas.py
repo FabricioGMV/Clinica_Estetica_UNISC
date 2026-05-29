@@ -106,7 +106,7 @@ def registrar_sessao(id):
 
     return render_template('form_procedimento.html', agendamento=agendamento, paciente=paciente)
 
-# 10. Rota inteligente para Finalizar ou Cancelar via botões rápidos (Modal do perfil)
+#10. Rota inteligente para Finalizar ou Cancelar via botões rápidos (Modal do perfil)
 @rotas_bp.route('/agendamento/<int:id>/mudar_status/<novo_status>', methods=['POST'])
 def mudar_status_agendamento(id, novo_status):
     conn = get_db_connection()
@@ -118,3 +118,28 @@ def mudar_status_agendamento(id, novo_status):
     conn.close()
     
     return redirect(url_for('rotas.perfil_paciente', id=agendamento['paciente_id']))
+
+#11. Rota para visualizar todas as sessões de um procedimento específico de forma detalhada
+@rotas_bp.route('/agendamento/<int:id>/sessoes')
+def ver_sessoes_detalhadas(id):
+    agendamento = agendamento_service.obter_agendamento(id)
+    paciente = paciente_service.obter_paciente(agendamento['paciente_id'])
+    sessoes = agendamento_service.listar_procedimentos_por_agendamento(id)
+    
+    return render_template('sessoes_detalhadas.html', agendamento=agendamento, paciente=paciente, sessoes=sessoes)
+
+#12. Rota opcional para editar apenas a data de retorno de uma sessão específica (enquanto pendente)
+@rotas_bp.route('/sessao/<int:sessao_id>/editar_retorno', methods=['POST'])
+def editar_retorno(sessao_id):
+    nova_data = request.form.get('data_hora_retorno')
+    conn = get_db_connection()
+    
+    # Verifica se a sessão existe e se o retorno ainda não foi realizado
+    sessao = conn.execute('SELECT * FROM procedimentos WHERE id = ?', (sessao_id,)).fetchone()
+    
+    if sessao and sessao['status_retorno'] == 'Agendado':
+        conn.execute('UPDATE procedimentos SET data_hora_retorno = ? WHERE id = ?', (nova_data, sessao_id))
+        conn.commit()
+    
+    conn.close()
+    return redirect(url_for('rotas.ver_sessoes_detalhadas', id=sessao['agendamento_id']))

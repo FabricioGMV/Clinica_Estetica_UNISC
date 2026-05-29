@@ -35,7 +35,7 @@ def init_db():
         )
     ''')
     
-    # Tabela 3: Procedimentos (Execução)
+    # Tabela 3: Procedimentos (Execução de Sessão)
     conn.execute('''
         CREATE TABLE IF NOT EXISTS procedimentos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,6 +52,8 @@ def init_db():
             foto_depois TEXT,
             observacoes_execucao TEXT,
             observacao_final TEXT,
+            data_hora_retorno DATETIME,
+            status_retorno TEXT DEFAULT 'Agendado',
             FOREIGN KEY (agendamento_id) REFERENCES agendamentos (id),
             FOREIGN KEY (paciente_id) REFERENCES pacientes (id)
         )
