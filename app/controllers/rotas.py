@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app.services import paciente_service, agendamento_service, procedimento_service
 from app.database import get_db_connection
 
@@ -70,20 +70,31 @@ def editar_agendamento(id):
     agendamento = agendamento_service.obter_agendamento(id)
     paciente = paciente_service.obter_paciente(agendamento['paciente_id'])
     
-    if request.method == 'POST':
-        dados_form = dict(request.form)
-        
-        # REMOVIDO: A trava que forçava "Finalizado" foi tirada.
-        # Agora ele salva exatamente como "Cancelado", do jeito que a tela de perfil espera.
-        
-        agendamento_service.atualizar_agendamento(id, dados_form)
-        
-        return redirect(url_for('rotas.perfil_paciente', id=paciente['id']))
-    
-    # --- Parte do GET (carregar a tela) ---
     conn = get_db_connection()
     qtd_sessoes = conn.execute('SELECT COUNT(*) FROM procedimentos WHERE agendamento_id = ?', (id,)).fetchone()[0]
     conn.close()
+    
+    # RN - Se o agendamento já está Finalizado ou Cancelado, bloqueia totalmente o acesso à edição
+    if agendamento['status'] in ['Finalizado', 'Cancelado']:
+        return redirect(url_for('rotas.perfil_paciente', id=paciente['id']))
+
+    if request.method == 'POST':
+        dados_form = dict(request.form)
+        
+        # RN - Se a 1ª sessão já foi feita, APENAS status e observações podem mudar.
+        # Repomos os dados originais do banco de dados pois os campos no HTML estão com "disabled/readonly"
+        if qtd_sessoes > 0:
+            campos_protegidos = ['data_hora', 'tipo_procedimento', 'sessoes_previstas', 'valor_cobrado', 'forma_pagamento']
+            for campo in campos_protegidos:
+                dados_form[campo] = agendamento[campo]
+                    
+        # RN - Se não tem sessões ainda, mas já está Pago, protege o financeiro
+        elif agendamento['status_pagamento'] == 'Pago':
+            for campo in ['valor_cobrado', 'forma_pagamento']:
+                dados_form[campo] = agendamento[campo]
+
+        agendamento_service.atualizar_agendamento(id, dados_form)
+        return redirect(url_for('rotas.perfil_paciente', id=paciente['id']))
     
     return render_template('form_agendamento.html', agendamento=agendamento, paciente=paciente, qtd_sessoes=qtd_sessoes)
 
@@ -94,17 +105,23 @@ def pagar_agendamento(id):
     agendamento_service.confirmar_pagamento_e_agendamento(id)
     return redirect(url_for('rotas.perfil_paciente', id=agendamento['paciente_id']))
 
-#9. Rota para registrar sessão
+#9. Rota para registrar sessão (ATUALIZADA PARA INJETAR QTD_SESSOES NO TEMPLATE)
 @rotas_bp.route('/agendamento/<int:id>/registrar_sessao', methods=['GET', 'POST'])
 def registrar_sessao(id):
     agendamento = agendamento_service.obter_agendamento(id)
     paciente = paciente_service.obter_paciente(agendamento['paciente_id'])
 
+    # Descobre quantas sessões já foram salvas para este agendamento para injetar no form de validação de retorno
+    conn = get_db_connection()
+    qtd_sessoes = conn.execute('SELECT COUNT(*) FROM procedimentos WHERE agendamento_id = ?', (id,)).fetchone()[0]
+    conn.close()
+
     if request.method == 'POST':
         procedimento_service.registrar_procedimento(id, paciente['id'], request.form, request.files)
         return redirect(url_for('rotas.perfil_paciente', id=paciente['id']))
 
-    return render_template('form_procedimento.html', agendamento=agendamento, paciente=paciente)
+    # Repassado "qtd_sessoes" para que o form_procedimento saiba se exige retorno ou não
+    return render_template('form_procedimento.html', agendamento=agendamento, paciente=paciente, qtd_sessoes=qtd_sessoes)
 
 #10. Rota inteligente para Finalizar ou Cancelar via botões rápidos (Modal do perfil)
 @rotas_bp.route('/agendamento/<int:id>/mudar_status/<novo_status>', methods=['POST'])

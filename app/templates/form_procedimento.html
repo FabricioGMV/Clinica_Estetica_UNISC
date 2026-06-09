@@ -67,10 +67,22 @@
                     </div>
 
                     {% if agendamento.sessoes_previstas > 1 %}
-                    <div class="mb-4 p-3 bg-white rounded border border-warning shadow-sm">
-                        <label class="form-label fw-bold text-warning-emphasis"><i class="bi bi-calendar-plus"></i> Agendar Próxima Sessão (Retorno)</label>
-                        <p class="text-muted small mb-2">Este procedimento exige mais sessões (Total previsto: {{ agendamento.sessoes_previstas }}). Caso ainda existam sessões pendentes, defina a data e hora do próximo retorno abaixo.</p>
-                        <input type="datetime-local" name="data_hora_retorno" class="form-control border-warning">
+                        {% set total_sessoes_feitas = qtd_sessoes if qtd_sessoes is defined else 0 %}
+                        {% set precisa_retorno = total_sessoes_feitas + 1 < agendamento.sessoes_previstas %}
+
+                    <div class="mb-4 p-3 bg-white rounded border {{ 'border-warning shadow-sm' if precisa_retorno else 'border-secondary' }}">
+                        <label class="form-label fw-bold {{ 'text-danger' if precisa_retorno else 'text-muted' }}">
+                            <i class="bi bi-calendar-plus"></i> Agendar Próxima Sessão (Retorno) {{ '*' if precisa_retorno else '(Opcional)' }}
+                        </label>
+                        <p class="text-muted small mb-2">
+                            Este procedimento tem {{ agendamento.sessoes_previstas }} sessões previstas. 
+                            {% if precisa_retorno %}
+                                <span class="text-danger fw-bold">Atenção: Como ainda há sessões pendentes no cronograma básico, definir a data do retorno é obrigatório!</span>
+                            {% else %}
+                                Como o cronograma previsto original de {{ agendamento.sessoes_previstas }} sessões foi alcançado, novos retornos tornam-se sessões extras de acompanhamento opcional.
+                            {% endif %}
+                        </p>
+                        <input type="datetime-local" name="data_hora_retorno" class="form-control {{ 'border-danger' if precisa_retorno else '' }}" {{ 'required' if precisa_retorno else '' }}>
                     </div>
                     {% endif %}
 

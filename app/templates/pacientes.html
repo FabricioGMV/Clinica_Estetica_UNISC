@@ -23,8 +23,15 @@
                 {% for p in pacientes %}
                 <tr>
                     <td class="fw-bold">{{ p.nome_completo }}</td>
-                    <td>{{ p.telefone }}</td>
-                    <td>{{ p.cpf }}</td>
+                    
+                    <td>
+                        {{ p.telefone[:3] ~ ' ' ~ p.telefone[3:5] ~ ' ' ~ p.telefone[5:10] ~ '-' ~ p.telefone[10:] if p.telefone and p.telefone|length >= 13 else p.telefone }}
+                    </td>
+                    
+                    <td>
+                        {{ p.cpf[:3] ~ '.' ~ p.cpf[3:6] ~ '.' ~ p.cpf[6:9] ~ '-' ~ p.cpf[9:] if p.cpf and p.cpf|length == 11 else p.cpf }}
+                    </td>
+                    
                     <td class="text-end">
                         <a href="/paciente/{{ p.id }}" class="btn btn-sm btn-outline-primary">Ver Histórico</a>
                     </td>

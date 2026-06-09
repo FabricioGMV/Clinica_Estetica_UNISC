@@ -16,15 +16,22 @@
             </div>
             <div class="card-body">
                 <h4>{{ paciente.nome_completo }}</h4>
-                <p class="text-muted mb-3">CPF: {{ paciente.cpf }}</p>
+                <p class="text-muted mb-3">CPF: {{ paciente.cpf[:3] ~ '.' ~ paciente.cpf[3:6] ~ '.' ~ paciente.cpf[6:9] ~ '-' ~ paciente.cpf[9:] if paciente.cpf and paciente.cpf|length == 11 else paciente.cpf }}</p>
                 <hr>
-                <p class="mb-2"><strong>Telefone:</strong> <a href="https://wa.me/55{{ paciente.telefone | replace(' ', '') | replace('-', '') | replace('(', '') | replace(')', '') }}" target="_blank" class="text-decoration-none"><i class="bi bi-whatsapp text-success"></i> {{ paciente.telefone }}</a></p>
+                <p class="mb-2"><strong>Telefone:</strong> <a href="https://wa.me/{{ paciente.telefone | replace('+', '') }}" target="_blank" class="text-decoration-none"><i class="bi bi-whatsapp text-success"></i> 
+                    {{ paciente.telefone[:3] ~ ' ' ~ paciente.telefone[3:5] ~ ' ' ~ paciente.telefone[5:10] ~ '-' ~ paciente.telefone[10:] if paciente.telefone and paciente.telefone|length >= 13 else paciente.telefone }}
+                </a></p>
                 <p class="mb-2"><strong>E-mail:</strong> {{ paciente.email }}</p>
-                <p class="mb-2"><strong>Nascimento:</strong> {{ paciente.data_nascimento }}</p>
+                <p class="mb-2"><strong>Nascimento:</strong> 
+                    {% if paciente.data_nascimento and paciente.data_nascimento|length >= 10 %}
+                        {{ paciente.data_nascimento[8:10] }}/{{ paciente.data_nascimento[5:7] }}/{{ paciente.data_nascimento[0:4] }}
+                    {% else %}
+                        {{ paciente.data_nascimento }}
+                    {% endif %}
+                </p>
                 <hr>
                 <h6>Histórico Médico:</h6>
                 <p class="small text-muted">{{ paciente.historico_medico or 'Nenhum histórico informado.' }}</p>
-                
                 <div class="mt-3">
                     <span class="badge {{ 'bg-success' if paciente.termo_consentimento else 'bg-danger' }}">Termo de Consentimento</span>
                     <span class="badge {{ 'bg-success' if paciente.autorizacao_imagem else 'bg-danger' }}">Uso de Imagem</span>
@@ -53,7 +60,12 @@
 
                 <div class="row text-muted small mb-3">
                     <div class="col-md-4">
-                        <i class="bi bi-calendar"></i> Criado para: {{ ag.dados.data_hora }}
+                        <i class="bi bi-calendar"></i> Criado para: 
+                        {% if ag.dados.data_hora and ag.dados.data_hora|length >= 16 %}
+                            {{ ag.dados.data_hora[8:10] }}/{{ ag.dados.data_hora[5:7] }}/{{ ag.dados.data_hora[0:4] }} às {{ ag.dados.data_hora[11:16] }}
+                        {% else %}
+                            {{ ag.dados.data_hora }}
+                        {% endif %}
                     </div>
                     <div class="col-md-4">
                         <i class="bi bi-cash"></i> {{ ag.dados.status_pagamento }} (R$ {{ "%.2f"|format(ag.dados.valor_cobrado) }})
@@ -70,7 +82,12 @@
                 {% endif %}
 
                 <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
-                    <a href="/agendamento/{{ ag.dados.id }}/editar" class="btn btn-sm btn-outline-primary">Editar Agendamento</a>
+                    
+                    {% if ag.dados.status in ['Finalizado', 'Cancelado'] %}
+                        <button class="btn btn-sm btn-outline-secondary" disabled title="Agendamentos encerrados não podem ser alterados."><i class="bi bi-lock-fill"></i> Bloqueado p/ Edição</button>
+                    {% else %}
+                        <a href="/agendamento/{{ ag.dados.id }}/editar" class="btn btn-sm btn-outline-primary">Editar Agendamento</a>
+                    {% endif %}
                     
                     {% if ag.dados.status_pagamento == 'Aguardando' and ag.dados.status != 'Cancelado' %}
                         <form method="POST" action="/agendamento/{{ ag.dados.id }}/pagar" class="d-inline">
@@ -81,9 +98,11 @@
                     {% if ag.dados.status not in ['Finalizado', 'Cancelado'] %}
                         <a href="/agendamento/{{ ag.dados.id }}/registrar_sessao" class="btn btn-sm btn-primary"><i class="bi bi-play-circle"></i> Registrar Nova Sessão</a>
                         
+                        {% if ag.sessoes|length > 0 %}
                         <form method="POST" action="/agendamento/{{ ag.dados.id }}/mudar_status/Finalizado" class="d-inline ms-auto">
                             <button type="submit" class="btn btn-sm btn-dark" onclick="return confirm('Tem certeza que deseja encerrar todo o procedimento?')">Finalizar Tratamento</button>
                         </form>
+                        {% endif %}
                     {% endif %}
 
                     {% if ag.sessoes|length > 0 %}

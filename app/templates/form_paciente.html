@@ -14,7 +14,7 @@
                         <h4 class="mb-0">{{ 'Editar Paciente' if paciente else 'Cadastrar Novo Paciente' }}</h4>
                     </div>
                     <div class="card-body">
-                        <form method="POST" action="{{ '/paciente/' ~ paciente.id ~ '/editar' if paciente else '/paciente/novo' }}">
+                        <form id="formPaciente" method="POST" action="{{ '/paciente/' ~ paciente.id ~ '/editar' if paciente else '/paciente/novo' }}">
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label>Nome Completo</label>
@@ -22,22 +22,22 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label>E-mail</label>
-                                    <input type="email" name="email" class="form-control" value="{{ paciente.email if paciente else '' }}">
+                                    <input type="email" name="email" class="form-control" value="{{ paciente.email if paciente else '' }}" required>
                                 </div>
                             </div>
                             
                             <div class="row mb-3">
                                 <div class="col-md-4">
                                     <label>Telefone / WhatsApp</label>
-                                    <input type="text" name="telefone" class="form-control" value="{{ paciente.telefone if paciente else '' }}" required>
+                                    <input type="text" name="telefone" id="telefone" class="form-control" value="{{ paciente.telefone if paciente else '' }}" required placeholder="+55 11 90000-0000">
                                 </div>
                                 <div class="col-md-4">
                                     <label>CPF</label>
-                                    <input type="text" name="cpf" class="form-control" value="{{ paciente.cpf if paciente else '' }}">
+                                    <input type="text" name="cpf" id="cpf" class="form-control" value="{{ paciente.cpf if paciente else '' }}" placeholder="000.000.000-00" required>
                                 </div>
                                 <div class="col-md-4">
                                     <label>Data de Nascimento</label>
-                                    <input type="date" name="data_nascimento" class="form-control" value="{{ paciente.data_nascimento if paciente else '' }}">
+                                    <input type="date" name="data_nascimento" id="data_nascimento" class="form-control" value="{{ paciente.data_nascimento if paciente else '' }}" required>
                                 </div>
                             </div>
 
@@ -47,11 +47,11 @@
                             </div>
 
                             <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="termo_consentimento" id="termo" {% if paciente and paciente.termo_consentimento %}checked{% endif %}>
+                                <input class="form-check-input" type="checkbox" name="termo_consentimento" id="termo" {% if paciente and paciente.termo_consentimento %}checked{% endif %} required>
                                 <label class="form-check-label" for="termo">Assinou Termo de Consentimento?</label>
                             </div>
                             <div class="form-check mb-4">
-                                <input class="form-check-input" type="checkbox" name="autorizacao_imagem" id="imagem" {% if paciente and paciente.autorizacao_imagem %}checked{% endif %}>
+                                <input class="form-check-input" type="checkbox" name="autorizacao_imagem" id="imagem" {% if paciente and paciente.autorizacao_imagem %}checked{% endif %} required>
                                 <label class="form-check-label" for="imagem">Autorizou Uso de Imagem?</label>
                             </div>
 
@@ -63,5 +63,94 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cpfInput = document.getElementById('cpf');
+            const telInput = document.getElementById('telefone');
+            const dataInput = document.getElementById('data_nascimento'); // Pegando o campo de data
+            const form = document.getElementById('formPaciente');
+
+            // Máscara CPF (XXX.XXX.XXX-XX)
+            if (cpfInput) {
+                cpfInput.addEventListener('input', function (e) {
+                    let v = e.target.value.replace(/\D/g, ''); // Remove o que não é número
+                    if (v.length > 11) v = v.substring(0, 11); // Limita a 11 números
+                    v = v.replace(/(\d{3})(\d)/, '$1.$2');
+                    v = v.replace(/(\d{3})(\d)/, '$1.$2');
+                    v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                    e.target.value = v;
+                });
+            }
+
+            // Máscara Telefone (+55 11 99999-9999)
+            if (telInput) {
+                telInput.addEventListener('input', function (e) {
+                    let v = e.target.value.replace(/\D/g, ''); 
+                    if (v.length === 0) { e.target.value = ''; return; }
+                    
+                    if (!v.startsWith('55')) { v = '55' + v; } // Força o DDI +55
+                    if (v.length > 13) v = v.substring(0, 13); // Limita tamanho total
+                    
+                    let masked = '+' + v.substring(0, 2);
+                    if (v.length > 2) masked += ' ' + v.substring(2, 4);
+                    if (v.length > 4) masked += ' ' + v.substring(4, 9);
+                    if (v.length > 9) masked += '-' + v.substring(9, 13);
+                    
+                    e.target.value = masked;
+                });
+            }
+
+            // Intercepta o envio para validar tamanho, datas e limpar para o Banco de Dados
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    
+                    // 1. Validação da Data de Nascimento (Impede anos absurdos)
+                    if (dataInput && dataInput.value) {
+                        // O value do input date vem no formato YYYY-MM-DD. Quebramos no '-' e pegamos o primeiro item (o ano).
+                        let anoDigitado = parseInt(dataInput.value.split('-')[0]); 
+                        let anoAtual = new Date().getFullYear();
+
+                        if (anoDigitado < 1900 || anoDigitado > anoAtual) {
+                            e.preventDefault(); // Trava o envio
+                            alert(`Erro: O ano de nascimento (${anoDigitado}) é inválido. Insira um ano entre 1900 e ${anoAtual}.`);
+                            dataInput.focus();
+                            return; // Encerra a função aqui
+                        }
+                    }
+
+                    // 2. Validação do CPF: Se digitou algo, DEVE ter 11 números
+                    if (cpfInput && cpfInput.value) {
+                        let cpfNumeros = cpfInput.value.replace(/\D/g, '');
+                        if (cpfNumeros.length !== 11) {
+                            e.preventDefault(); // Trava o envio
+                            alert('Erro: O CPF precisa ter exatamente 11 dígitos.');
+                            cpfInput.focus();
+                            return; // Encerra a função aqui
+                        }
+                    }
+
+                    // 3. Validação do Telefone: DEVE ter 12 ou 13 números (incluindo o 55 do DDI)
+                    if (telInput && telInput.value) {
+                        let telNumeros = telInput.value.replace(/\D/g, '');
+                        if (telNumeros.length < 12 || telNumeros.length > 13) {
+                            e.preventDefault(); // Trava o envio
+                            alert('Erro: O telefone precisa ter o DDD e o número completo (mínimo 10 dígitos além do +55).');
+                            telInput.focus();
+                            return; // Encerra a função aqui
+                        }
+                    }
+
+                    // 4. Se passou em todas as validações, limpa os traços/pontos para salvar no BD
+                    if (cpfInput && cpfInput.value) {
+                        cpfInput.value = cpfInput.value.replace(/\D/g, '');
+                    }
+                    if (telInput && telInput.value) {
+                        telInput.value = telInput.value.replace(/[^\d+]/g, '');
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
