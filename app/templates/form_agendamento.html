@@ -24,11 +24,14 @@
                 </div>
                 {% endif %}
 
-                <form method="POST" id="formEdicaoAgendamento">
+                <form method="POST" id="formEdicaoAgendamento" 
+                      data-is-edicao="{{ 'true' if agendamento else 'false' }}" 
+                      data-original-bd="{{ agendamento.data_hora if agendamento else '' }}">
+                      
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Data e Hora</label>
-                            <input type="datetime-local" name="data_hora" class="form-control bg-light" value="{{ agendamento.data_hora if agendamento else '' }}" required {{ 'readonly' if has_sessoes else '' }}>
+                            <input type="datetime-local" id="data_hora" name="data_hora" class="form-control bg-light" value="{{ agendamento.data_hora if agendamento else '' }}" required {{ 'readonly' if has_sessoes else '' }}>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Status</label>
@@ -57,7 +60,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Valor Total (R$)</label>
-                            <input type="number" step="0.01" name="valor_cobrado" class="form-control bg-light" value="{{ agendamento.valor_cobrado if agendamento else '' }}" required {{ 'readonly' if is_pago or has_sessoes else '' }}>
+                            <input type="text" id="valor_cobrado" name="valor_cobrado" class="form-control bg-light" value="{{ agendamento.valor_cobrado if agendamento else '' }}" placeholder="0,00" required {{ 'readonly' if is_pago or has_sessoes else '' }}>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Forma de Pagamento</label>
@@ -108,10 +111,53 @@
     document.addEventListener("DOMContentLoaded", function() {
         const formAgendamento = document.getElementById('formEdicaoAgendamento');
         const selectStatus = document.getElementById('status_select');
+        const inputDataHora = document.getElementById('data_hora');
+        const inputValor = document.getElementById('valor_cobrado');
         const qtdSessoes = Number("{{ qtd_sessoes | default(0) }}");
-
-        const statusOriginal = (selectStatus.value && selectStatus.value !== 'Cancelado') ? selectStatus.value : 'Confirmado';
         
+        // Resgate seguro dos atributos HTML para o JS sem alarmar o linter do editor
+        const isEdicao = formAgendamento.dataset.isEdicao === 'true';
+        const dataOriginalBD = formAgendamento.dataset.originalBd;
+
+        // ---- Formatação Dinâmica de Moeda Brasileira ----
+        function formatarMoeda(valor) {
+            valor = valor.replace(/\D/g, ""); // Remove tudo que não for número
+            if (valor === "") return "";
+            valor = (parseInt(valor, 10) / 100).toFixed(2) + "";
+            valor = valor.replace(".", ","); // Troca ponto decimal por vírgula
+            valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1."); // Adiciona pontos de milhar
+            return valor;
+        }
+
+        // Aplica a máscara se o BD enviar valor na edição
+        if (inputValor && inputValor.value && !inputValor.value.includes(",")) {
+            let valorFloat = parseFloat(inputValor.value);
+            if (!isNaN(valorFloat)) {
+                if (valorFloat > 3000) valorFloat = 3000; // Bloqueio preventivo na carga de dados
+                let valorString = valorFloat.toFixed(2).replace('.', '');
+                inputValor.value = formatarMoeda(valorString);
+            }
+        }
+
+        // Monitora digitação e limita o valor máximo em R$ 3.000,00
+        if (inputValor) {
+            inputValor.addEventListener("input", function(e) {
+                let apenasNumeros = e.target.value.replace(/\D/g, "");
+                
+                if (apenasNumeros !== "") {
+                    let valorFloat = parseInt(apenasNumeros, 10) / 100;
+                    // Se passar de 3000, fixa o valor máximo correspondente a R$ 3.000,00
+                    if (valorFloat > 3000) {
+                        apenasNumeros = "300000"; 
+                    }
+                }
+                
+                e.target.value = formatarMoeda(apenasNumeros);
+            });
+        }
+
+        // ---- Lógica do Modal de Cancelamento ----
+        const statusOriginal = (selectStatus.value && selectStatus.value !== 'Cancelado') ? selectStatus.value : 'Confirmado';
         let cancelamentoConfirmado = false;
 
         const modalEl = document.getElementById('modalConfirmarCancelamento');
@@ -120,7 +166,38 @@
             keyboard: false
         });
 
+        // ---- Validações no Submit ----
         formAgendamento.addEventListener('submit', function(event) {
+            
+            // 1. Trava de Data (Passado e Limite Futuro de 1 Ano)
+            if (inputDataHora && inputDataHora.value) {
+                let dataDigitada = new Date(inputDataHora.value);
+                let dataAtual = new Date();
+                
+                let dataLimite = new Date();
+                dataLimite.setFullYear(dataAtual.getFullYear() + 1);
+
+                if (dataDigitada > dataLimite) {
+                    event.preventDefault(); 
+                    alert("Erro: Não é possível realizar um agendamento com mais de 1 ano de antecedência.");
+                    inputDataHora.focus();
+                    return;
+                }
+
+                if (!isEdicao || (isEdicao && inputDataHora.value !== dataOriginalBD)) {
+                    let dataMinima = new Date();
+                    dataMinima.setMinutes(dataMinima.getMinutes() - 30); // 30 minutos de tolerância
+
+                    if (dataDigitada < dataMinima) {
+                        event.preventDefault(); 
+                        alert("Erro: A data e hora do agendamento não podem estar no passado.");
+                        inputDataHora.focus();
+                        return;
+                    }
+                }
+            }
+
+            // 2. Acionamento do Modal de Cancelamento
             if (selectStatus.value === 'Cancelado' && !cancelamentoConfirmado) {
                 event.preventDefault(); 
 
@@ -133,6 +210,16 @@
                 
                 document.getElementById('textoModalCancelamento').innerText = textoModal;
                 modalConfirmacao.show();
+                return;
+            }
+
+            // 3. Limpeza do formato R$ para envio ao DB (Garante envio limpo)
+            if (inputValor && inputValor.value) {
+                let limpo = inputValor.value.replace(/\./g, "").replace(",", ".");
+                if (parseFloat(limpo) > 3000) {
+                    limpo = "3000.00";
+                }
+                inputValor.value = limpo;
             }
         });
 

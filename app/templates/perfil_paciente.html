@@ -46,76 +46,225 @@
             <a href="/paciente/{{ paciente.id }}/agendar" class="btn btn-success"><i class="bi bi-plus-circle"></i> Novo Agendamento</a>
         </div>
 
-        {% for ag in agendamentos %}
-        <div class="card mb-3 shadow-sm {{ 'border-secondary opacity-75' if ag.dados.status in ['Finalizado', 'Cancelado'] else 'border-info' }}">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h5 class="card-title text-primary mb-0">{{ ag.dados.tipo_procedimento }}</h5>
-                    <div class="text-end">
-                        <span class="badge {{ 'bg-warning text-dark' if ag.dados.status == 'Aguardando' else 'bg-success' if ag.dados.status == 'Confirmado' else 'bg-secondary' }}">
-                            {{ ag.dados.status }}
-                        </span>
-                    </div>
-                </div>
-
-                <div class="row text-muted small mb-3">
+        <div class="card shadow-sm mb-4 bg-light border-0">
+            <div class="card-body py-3">
+                <div class="row g-2">
                     <div class="col-md-4">
-                        <i class="bi bi-calendar"></i> Criado para: 
-                        {% if ag.dados.data_hora and ag.dados.data_hora|length >= 16 %}
-                            {{ ag.dados.data_hora[8:10] }}/{{ ag.dados.data_hora[5:7] }}/{{ ag.dados.data_hora[0:4] }} às {{ ag.dados.data_hora[11:16] }}
-                        {% else %}
-                            {{ ag.dados.data_hora }}
-                        {% endif %}
+                        <input type="text" id="filtroTexto" class="form-control form-control-sm" placeholder="🔍 Buscar procedimento...">
                     </div>
                     <div class="col-md-4">
-                        <i class="bi bi-cash"></i> {{ ag.dados.status_pagamento }} (R$ {{ "%.2f"|format(ag.dados.valor_cobrado) }})
+                        <select id="filtroStatus" class="form-select form-select-sm">
+                            <option value="">Todos os Status</option>
+                            <option value="Aguardando">Aguardando</option>
+                            <option value="Confirmado">Confirmado</option>
+                            <option value="Finalizado">Finalizado</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
                     </div>
-                    <div class="col-md-4 text-dark fw-bold">
-                        <i class="bi bi-layers"></i> Sessões: {{ ag.sessoes|length }} de {{ ag.dados.sessoes_previstas }}
+                    <div class="col-md-4">
+                        <select id="filtroPagamento" class="form-select form-select-sm">
+                            <option value="">Status de Pagamento</option>
+                            <option value="Pago">Pago</option>
+                            <option value="Aguardando">Aguardando Pagamento</option>
+                        </select>
                     </div>
-                </div>
-
-                {% if ag.dados.observacoes %}
-                <div class="alert alert-light border py-2 mb-3 small">
-                    <strong>Obs:</strong> {{ ag.dados.observacoes }}
-                </div>
-                {% endif %}
-
-                <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
-                    
-                    {% if ag.dados.status in ['Finalizado', 'Cancelado'] %}
-                        <button class="btn btn-sm btn-outline-secondary" disabled title="Agendamentos encerrados não podem ser alterados."><i class="bi bi-lock-fill"></i> Bloqueado p/ Edição</button>
-                    {% else %}
-                        <a href="/agendamento/{{ ag.dados.id }}/editar" class="btn btn-sm btn-outline-primary">Editar Agendamento</a>
-                    {% endif %}
-                    
-                    {% if ag.dados.status_pagamento == 'Aguardando' and ag.dados.status != 'Cancelado' %}
-                        <form method="POST" action="/agendamento/{{ ag.dados.id }}/pagar" class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-success">Confirmar Pagamento</button>
-                        </form>
-                    {% endif %}
-                    
-                    {% if ag.dados.status not in ['Finalizado', 'Cancelado'] %}
-                        <a href="/agendamento/{{ ag.dados.id }}/registrar_sessao" class="btn btn-sm btn-primary"><i class="bi bi-play-circle"></i> Registrar Nova Sessão</a>
-                        
-                        {% if ag.sessoes|length > 0 %}
-                        <form method="POST" action="/agendamento/{{ ag.dados.id }}/mudar_status/Finalizado" class="d-inline ms-auto">
-                            <button type="submit" class="btn btn-sm btn-dark" onclick="return confirm('Tem certeza que deseja encerrar todo o procedimento?')">Finalizar Tratamento</button>
-                        </form>
-                        {% endif %}
-                    {% endif %}
-
-                    {% if ag.sessoes|length > 0 %}
-                        <a href="/agendamento/{{ ag.dados.id }}/sessoes" class="btn btn-sm btn-info text-dark fw-bold ms-auto"><i class="bi bi-eye"></i> Ver Histórico de Sessões</a>
-                    {% endif %}
                 </div>
             </div>
         </div>
-        {% else %}
-        <div class="alert alert-secondary text-center">
-            Nenhum agendamento encontrado para este paciente.
+
+        <div id="listaAgendamentos">
+            {% for ag in agendamentos %}
+            <div class="card mb-3 shadow-sm agendamento-card {{ 'border-secondary opacity-75' if ag.dados.status in ['Finalizado', 'Cancelado'] else 'border-info' }}" 
+                 data-status="{{ ag.dados.status }}" 
+                 data-pagamento="{{ ag.dados.status_pagamento }}">
+                
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title text-primary mb-0 nome-procedimento">{{ ag.dados.tipo_procedimento }}</h5>
+                        <div class="text-end">
+                            <span class="badge {{ 'bg-warning text-dark' if ag.dados.status == 'Aguardando' else 'bg-success' if ag.dados.status == 'Confirmado' else 'bg-secondary' }}">
+                                {{ ag.dados.status }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row text-muted small mb-3">
+                        <div class="col-md-4">
+                            <i class="bi bi-calendar"></i> Criado para: 
+                            {% if ag.dados.data_hora and ag.dados.data_hora|length >= 16 %}
+                                {{ ag.dados.data_hora[8:10] }}/{{ ag.dados.data_hora[5:7] }}/{{ ag.dados.data_hora[0:4] }} às {{ ag.dados.data_hora[11:16] }}
+                            {% else %}
+                                {{ ag.dados.data_hora }}
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <i class="bi bi-cash"></i> {{ ag.dados.status_pagamento }} (R$ {{ "{:,.2f}".format(ag.dados.valor_cobrado | float).replace(',', 'X').replace('.', ',').replace('X', '.') }})
+                        </div>
+                        <div class="col-md-4 text-dark fw-bold">
+                            <i class="bi bi-layers"></i> Sessões: {{ ag.sessoes|length }} de {{ ag.dados.sessoes_previstas }}
+                        </div>
+                    </div>
+
+                    {% if ag.dados.observacoes %}
+                    <div class="alert alert-light border py-2 mb-3 small texto-obs">
+                        <strong>Obs:</strong> {{ ag.dados.observacoes }}
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
+                        {% if ag.dados.status in ['Finalizado', 'Cancelado'] %}
+                            <button class="btn btn-sm btn-outline-secondary" disabled title="Agendamentos encerrados não podem ser alterados."><i class="bi bi-lock-fill"></i> Bloqueado p/ Edição</button>
+                        {% else %}
+                            <a href="/agendamento/{{ ag.dados.id }}/editar" class="btn btn-sm btn-outline-primary">Editar Agendamento</a>
+                        {% endif %}
+                        
+                        {% if ag.dados.status_pagamento == 'Aguardando' and ag.dados.status != 'Cancelado' %}
+                            <form method="POST" action="/agendamento/{{ ag.dados.id }}/pagar" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-success">Confirmar Pagamento</button>
+                            </form>
+                        {% endif %}
+                        
+                        {% if ag.dados.status not in ['Finalizado', 'Cancelado'] %}
+                            <a href="/agendamento/{{ ag.dados.id }}/registrar_sessao" class="btn btn-sm btn-primary"><i class="bi bi-play-circle"></i> Registrar Nova Sessão</a>
+                            
+                            {% if ag.sessoes|length > 0 %}
+                            <form method="POST" action="/agendamento/{{ ag.dados.id }}/mudar_status/Finalizado" class="d-inline ms-auto">
+                                <button type="submit" class="btn btn-sm btn-dark" onclick="return confirm('Tem certeza que deseja encerrar todo o procedimento?')">Finalizar Tratamento</button>
+                            </form>
+                            {% endif %}
+                        {% endif %}
+
+                        {% if ag.sessoes|length > 0 %}
+                            <a href="/agendamento/{{ ag.dados.id }}/sessoes" class="btn btn-sm btn-info text-dark fw-bold ms-auto"><i class="bi bi-eye"></i> Ver Histórico de Sessões</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-secondary text-center" id="msgVazioBD">
+                Nenhum agendamento encontrado para este paciente.
+            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
+
+        <div id="msgFiltroVazio" class="alert alert-warning text-center" style="display: none;">
+            Nenhum procedimento encontrado com os filtros selecionados.
+        </div>
+
+        <nav aria-label="Navegação de agendamentos">
+            <ul class="pagination justify-content-center mt-4" id="paginacao">
+                </ul>
+        </nav>
+        
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // VARIÁVEIS DE CONFIGURAÇÃO DA PAGINAÇÃO
+    const itemsPorPagina = 3; // Mude esse número para exibir mais ou menos itens por página
+    let paginaAtual = 1;
+
+    // ELEMENTOS DO DOM
+    const cards = Array.from(document.querySelectorAll('.agendamento-card'));
+    const containerPaginacao = document.getElementById('paginacao');
+    const msgFiltroVazio = document.getElementById('msgFiltroVazio');
+    const msgVazioBD = document.getElementById('msgVazioBD');
+    
+    // INPUTS DO FILTRO
+    const filtroTexto = document.getElementById('filtroTexto');
+    const filtroStatus = document.getElementById('filtroStatus');
+    const filtroPagamento = document.getElementById('filtroPagamento');
+
+    // Função que aplica os filtros e processa a paginação
+    function atualizarLista() {
+        const texto = filtroTexto.value.toLowerCase();
+        const status = filtroStatus.value;
+        const pagamento = filtroPagamento.value;
+
+        // 1. Filtrar os Cards
+        let cardsFiltrados = cards.filter(card => {
+            const cardStatus = card.getAttribute('data-status');
+            const cardPagamento = card.getAttribute('data-pagamento');
+            const cardTexto = card.innerText.toLowerCase(); // Busca no texto todo do card (Nome, obs, data)
+
+            const matchTexto = cardTexto.includes(texto);
+            const matchStatus = status === "" || cardStatus === status;
+            const matchPagamento = pagamento === "" || cardPagamento === pagamento;
+
+            return matchTexto && matchStatus && matchPagamento;
+        });
+
+        // 2. Controlar mensagens de "vazio"
+        if (cards.length > 0) {
+            msgFiltroVazio.style.display = cardsFiltrados.length === 0 ? 'block' : 'none';
+        }
+
+        // 3. Paginação
+        const totalPaginas = Math.ceil(cardsFiltrados.length / itemsPorPagina);
+        if (paginaAtual > totalPaginas) paginaAtual = totalPaginas || 1;
+
+        const indiceInicio = (paginaAtual - 1) * itemsPorPagina;
+        const indiceFim = indiceInicio + itemsPorPagina;
+
+        // 4. Esconde tudo e exibe apenas os da página atual
+        cards.forEach(card => card.style.display = 'none');
+        cardsFiltrados.slice(indiceInicio, indiceFim).forEach(card => {
+            card.style.display = 'block';
+        });
+
+        // 5. Renderizar botões
+        renderizarBotoes(totalPaginas);
+    }
+
+    function renderizarBotoes(totalPaginas) {
+        containerPaginacao.innerHTML = ''; // Limpa botões antigos
+
+        if (totalPaginas <= 1) return; // Não exibe paginação se só tem 1 página
+
+        // Botão Anterior
+        const btnAnterior = document.createElement('li');
+        btnAnterior.className = `page-item ${paginaAtual === 1 ? 'disabled' : ''}`;
+        btnAnterior.innerHTML = `<a class="page-link" href="#" aria-label="Anterior"><span aria-hidden="true">&laquo;</span></a>`;
+        btnAnterior.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (paginaAtual > 1) { paginaAtual--; atualizarLista(); }
+        });
+        containerPaginacao.appendChild(btnAnterior);
+
+        // Números das Páginas
+        for (let i = 1; i <= totalPaginas; i++) {
+            const btnNumero = document.createElement('li');
+            btnNumero.className = `page-item ${paginaAtual === i ? 'active' : ''}`;
+            btnNumero.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+            btnNumero.addEventListener('click', (e) => {
+                e.preventDefault();
+                paginaAtual = i;
+                atualizarLista();
+            });
+            containerPaginacao.appendChild(btnNumero);
+        }
+
+        // Botão Próximo
+        const btnProximo = document.createElement('li');
+        btnProximo.className = `page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}`;
+        btnProximo.innerHTML = `<a class="page-link" href="#" aria-label="Próximo"><span aria-hidden="true">&raquo;</span></a>`;
+        btnProximo.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (paginaAtual < totalPaginas) { paginaAtual++; atualizarLista(); }
+        });
+        containerPaginacao.appendChild(btnProximo);
+    }
+
+    // EVENT LISTENERS DOS FILTROS (Acionados sempre que o usuário digitar ou mudar a opção)
+    filtroTexto.addEventListener('input', () => { paginaAtual = 1; atualizarLista(); });
+    filtroStatus.addEventListener('change', () => { paginaAtual = 1; atualizarLista(); });
+    filtroPagamento.addEventListener('change', () => { paginaAtual = 1; atualizarLista(); });
+
+    // Inicialização ao abrir a página
+    atualizarLista();
+});
+</script>
 {% endblock %}

@@ -25,7 +25,7 @@ def novo_paciente():
     
     return render_template('form_paciente.html')
 
-#4. Rota para o perfil do paciente
+#4. Rota para o perfil do paciente (ATUALIZADA COM ORDENAÇÃO INTELIGENTE)
 @rotas_bp.route('/paciente/<int:id>')
 def perfil_paciente(id):
     paciente = paciente_service.obter_paciente(id)
@@ -35,11 +35,23 @@ def perfil_paciente(id):
     for ag in agendamentos_brutos:
         sessoes = agendamento_service.listar_procedimentos_por_agendamento(ag['id'])
         agendamentos.append({
-            'dados': ag,
+            'dados': dict(ag), # Convertido para dicionário para facilitar manuseio
             'sessoes': sessoes
         })
 
-    return render_template('perfil_paciente.html', paciente=paciente, agendamentos=agendamentos)
+    # RN 4: Ordenação dos agendamentos
+    ativos = [ag for ag in agendamentos if ag['dados']['status'] not in ['Finalizado', 'Cancelado']]
+    inativos = [ag for ag in agendamentos if ag['dados']['status'] in ['Finalizado', 'Cancelado']]
+
+    # Ativos: Do mais recente (próximo a hoje) pro mais longe (Crescente)
+    ativos.sort(key=lambda x: x['dados']['data_hora'])
+    # Inativos: Do mais recente finalizado pro mais antigo (Decrescente)
+    inativos.sort(key=lambda x: x['dados']['data_hora'], reverse=True)
+
+    # Junta as listas ordenadas
+    agendamentos_ordenados = ativos + inativos
+
+    return render_template('perfil_paciente.html', paciente=paciente, agendamentos=agendamentos_ordenados)
 
 #5. Rota para agendar nova consulta
 @rotas_bp.route('/paciente/<int:id>/agendar', methods=['GET', 'POST'])
@@ -64,31 +76,29 @@ def editar_paciente(id):
     
     return render_template('form_paciente.html', paciente=paciente)
 
-#7. Rota para editar agendamento
+#7. Rota para editar agendamento (CORRIGIDA A PROTEÇÃO DOS CAMPOS BLOQUEADOS)
 @rotas_bp.route('/agendamento/<int:id>/editar', methods=['GET', 'POST'])
 def editar_agendamento(id):
-    agendamento = agendamento_service.obter_agendamento(id)
+    agendamento = dict(agendamento_service.obter_agendamento(id)) # Transformado em dicionário
     paciente = paciente_service.obter_paciente(agendamento['paciente_id'])
     
     conn = get_db_connection()
     qtd_sessoes = conn.execute('SELECT COUNT(*) FROM procedimentos WHERE agendamento_id = ?', (id,)).fetchone()[0]
     conn.close()
     
-    # RN - Se o agendamento já está Finalizado ou Cancelado, bloqueia totalmente o acesso à edição
+    # RN - Se o agendamento já está Finalizado ou Cancelado, bloqueia totalmente
     if agendamento['status'] in ['Finalizado', 'Cancelado']:
         return redirect(url_for('rotas.perfil_paciente', id=paciente['id']))
 
     if request.method == 'POST':
         dados_form = dict(request.form)
         
-        # RN - Se a 1ª sessão já foi feita, APENAS status e observações podem mudar.
-        # Repomos os dados originais do banco de dados pois os campos no HTML estão com "disabled/readonly"
+        # Repõe os valores originais ignorando o formulário HTML (que estava disabled)
         if qtd_sessoes > 0:
             campos_protegidos = ['data_hora', 'tipo_procedimento', 'sessoes_previstas', 'valor_cobrado', 'forma_pagamento']
             for campo in campos_protegidos:
                 dados_form[campo] = agendamento[campo]
                     
-        # RN - Se não tem sessões ainda, mas já está Pago, protege o financeiro
         elif agendamento['status_pagamento'] == 'Pago':
             for campo in ['valor_cobrado', 'forma_pagamento']:
                 dados_form[campo] = agendamento[campo]

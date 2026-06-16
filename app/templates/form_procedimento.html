@@ -11,15 +11,15 @@
                 <small>Paciente: {{ paciente.nome_completo }} | Procedimento: {{ agendamento.tipo_procedimento }}</small>
             </div>
             <div class="card-body">
-                <form method="POST" enctype="multipart/form-data">
+                <form method="POST" id="formRegistroSessao" enctype="multipart/form-data">
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Início da Sessão</label>
-                            <input type="datetime-local" name="data_hora_iniciado" class="form-control" required>
+                            <input type="datetime-local" id="data_hora_iniciado" name="data_hora_iniciado" class="form-control" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Término da Sessão</label>
-                            <input type="datetime-local" name="data_hora_finalizacao" class="form-control" required>
+                            <input type="datetime-local" id="data_hora_finalizacao" name="data_hora_finalizacao" class="form-control" required>
                         </div>
                     </div>
 
@@ -82,7 +82,7 @@
                                 Como o cronograma previsto original de {{ agendamento.sessoes_previstas }} sessões foi alcançado, novos retornos tornam-se sessões extras de acompanhamento opcional.
                             {% endif %}
                         </p>
-                        <input type="datetime-local" name="data_hora_retorno" class="form-control {{ 'border-danger' if precisa_retorno else '' }}" {{ 'required' if precisa_retorno else '' }}>
+                        <input type="datetime-local" id="data_hora_retorno" name="data_hora_retorno" class="form-control {{ 'border-danger' if precisa_retorno else '' }}" {{ 'required' if precisa_retorno else '' }}>
                     </div>
                     {% endif %}
 
@@ -95,4 +95,90 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const formSessao = document.getElementById('formRegistroSessao');
+        const inputInicio = document.getElementById('data_hora_iniciado');
+        const inputFim = document.getElementById('data_hora_finalizacao');
+        const inputRetorno = document.getElementById('data_hora_retorno'); // Pode não existir se a sessão for única
+
+        if (formSessao) {
+            formSessao.addEventListener('submit', function(event) {
+                let dataAtual = new Date();
+                
+                // 1. Validação da Sessão Atual (Início e Fim)
+                if (inputInicio && inputInicio.value) {
+                    let inicioDigitado = new Date(inputInicio.value);
+                    
+                    // O registro não pode ter acontecido no futuro
+                    if (inicioDigitado > dataAtual) {
+                        event.preventDefault();
+                        alert("Erro: O início da sessão não pode ser uma data/hora no futuro.");
+                        inputInicio.focus();
+                        return;
+                    }
+                    
+                    // O registro não pode ser de um ano antes (para evitar digitação 0001)
+                    let limitePassado = new Date();
+                    limitePassado.setFullYear(dataAtual.getFullYear() - 1);
+                    if (inicioDigitado < limitePassado) {
+                        event.preventDefault();
+                        alert("Erro: O ano de início da sessão é inválido ou muito antigo.");
+                        inputInicio.focus();
+                        return;
+                    }
+                }
+
+                if (inputFim && inputFim.value) {
+                    let fimDigitado = new Date(inputFim.value);
+                    let inicioDigitado = new Date(inputInicio.value);
+                    
+                    if (fimDigitado > dataAtual) {
+                        event.preventDefault();
+                        alert("Erro: O término da sessão não pode ser uma data/hora no futuro.");
+                        inputFim.focus();
+                        return;
+                    }
+                    
+                    if (fimDigitado < inicioDigitado) {
+                        event.preventDefault();
+                        alert("Erro: O término da sessão não pode ser anterior ao início.");
+                        inputFim.focus();
+                        return;
+                    }
+                }
+
+                // 2. Validação da Data de Retorno (Passado e Limite Futuro de 1 Ano)
+                if (inputRetorno && inputRetorno.value) {
+                    let retornoDigitado = new Date(inputRetorno.value);
+                    
+                    // Limite Máximo: Data de Hoje + 1 Ano
+                    let dataLimite = new Date();
+                    dataLimite.setFullYear(dataAtual.getFullYear() + 1);
+
+                    if (retornoDigitado > dataLimite) {
+                        event.preventDefault(); 
+                        alert("Erro: Não é possível agendar um retorno com mais de 1 ano de antecedência.");
+                        inputRetorno.focus();
+                        return;
+                    }
+
+                    // Limite Mínimo: Passado (com tolerância de 30 minutos)
+                    let dataMinima = new Date();
+                    dataMinima.setMinutes(dataMinima.getMinutes() - 30);
+
+                    if (retornoDigitado < dataMinima) {
+                        event.preventDefault(); 
+                        alert("Erro: A data e hora do retorno não podem estar no passado.");
+                        inputRetorno.focus();
+                        return;
+                    }
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

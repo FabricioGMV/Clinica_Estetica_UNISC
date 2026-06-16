@@ -41,8 +41,8 @@
                 <div class="card-body">
                     <div class="row mb-3">
                         <div class="col-md-4">
-                            <strong>Início:</strong> {{ sessao.data_hora_iniciado }}<br>
-                            <strong>Fim:</strong> {{ sessao.data_hora_finalizacao }}
+                            <strong>Início:</strong> {{ sessao.data_hora_iniciado[8:10] }}/{{ sessao.data_hora_iniciado[5:7] }}/{{ sessao.data_hora_iniciado[0:4] }} às {{ sessao.data_hora_iniciado[11:16] }}<br>
+                            <strong>Fim:</strong> {{ sessao.data_hora_finalizacao[8:10] }}/{{ sessao.data_hora_finalizacao[5:7] }}/{{ sessao.data_hora_finalizacao[0:4] }} às {{ sessao.data_hora_finalizacao[11:16] }}
                         </div>
                         <div class="col-md-4">
                             <strong>Aluno(a):</strong> {{ sessao.aluno_responsavel }}<br>
@@ -52,7 +52,7 @@
                             {% if sessao.data_hora_retorno %}
                                 <div class="p-2 border rounded {{ 'bg-warning-subtle border-warning' if sessao.status_retorno == 'Agendado' else 'bg-success-subtle border-success' }}">
                                     <strong>Próximo Retorno:</strong><br> 
-                                    {{ sessao.data_hora_retorno }}<br>
+                                    {{ sessao.data_hora_retorno[8:10] }}/{{ sessao.data_hora_retorno[5:7] }}/{{ sessao.data_hora_retorno[0:4] }} às {{ sessao.data_hora_retorno[11:16] }}<br>
                                     <span class="badge {{ 'bg-warning text-dark' if sessao.status_retorno == 'Agendado' else 'bg-success' }}">
                                         Status: {{ sessao.status_retorno }}
                                     </span>
