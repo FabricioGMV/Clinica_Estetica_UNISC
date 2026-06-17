@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app.services import paciente_service, agendamento_service, procedimento_service
 from app.database import get_db_connection
+import datetime
 
 rotas_bp = Blueprint('rotas', __name__)
 
@@ -170,3 +171,100 @@ def editar_retorno(sessao_id):
     
     conn.close()
     return redirect(url_for('rotas.ver_sessoes_detalhadas', id=sessao['agendamento_id']))
+
+#13. Rota do Painel Financeiro (Atualizada com Filtros Avançados)
+@rotas_bp.route('/financeiro')
+def financeiro():
+    conn = get_db_connection()
+
+    # 1. Captura os filtros vindos da URL (se houver)
+    data_inicio = request.args.get('data_inicio', '')
+    data_fim = request.args.get('data_fim', '')
+    paciente_nome = request.args.get('paciente', '').strip()
+    status_agendamento = request.args.get('status', '')
+    status_pagamento = request.args.get('status_pagamento', '')
+    procedimento = request.args.get('procedimento', '').strip()
+
+    # 2. Monta a Query Base de forma inteligente
+    query = '''
+        SELECT a.*, p.nome_completo 
+        FROM agendamentos a
+        JOIN pacientes p ON a.paciente_id = p.id
+        WHERE 1=1
+    '''
+    params = []
+
+    # 3. Aplica os filtros apenas se o usuário tiver preenchido algo
+    if data_inicio:
+        # Pega tudo a partir da data inicial (ignorando a hora)
+        query += " AND date(a.data_hora) >= ?"
+        params.append(data_inicio)
+    
+    if data_fim:
+        # Pega tudo até a data final
+        query += " AND date(a.data_hora) <= ?"
+        params.append(data_fim)
+        
+    if paciente_nome:
+        query += " AND p.nome_completo LIKE ?"
+        params.append(f"%{paciente_nome}%")
+        
+    if status_agendamento:
+        query += " AND a.status = ?"
+        params.append(status_agendamento)
+        
+    if status_pagamento:
+        query += " AND a.status_pagamento = ?"
+        params.append(status_pagamento)
+        
+    if procedimento:
+        query += " AND a.tipo_procedimento LIKE ?"
+        params.append(f"%{procedimento}%")
+
+    # Ordena para os mais recentes ficarem no topo
+    query += " ORDER BY a.data_hora DESC"
+
+    # Executa a busca no Banco de Dados
+    agendamentos_filtrados = conn.execute(query, params).fetchall()
+    conn.close()
+
+    # 4. Variáveis do Painel
+    total_recebido = 0.0
+    total_pendente = 0.0
+    transacoes = []
+
+    # 5. Processamento Matemático (Calcula com base APENAS no que foi filtrado)
+    for ag in agendamentos_filtrados:
+        valor = float(ag['valor_cobrado'] if ag['valor_cobrado'] else 0)
+        status = ag['status']
+        pagamento = ag['status_pagamento']
+        
+        # Só soma em RECEBIDO se estiver Pago E não for um agendamento Cancelado 
+        # (caso alguém tenha pago e depois cancelado, isso vira um caso de reembolso, não receita líquida)
+        if pagamento == 'Pago' and status != 'Cancelado':
+            total_recebido += valor
+            
+        # Só soma em PENDENTE se não estiver pago E o agendamento ainda estiver ativo (Aguardando/Confirmado/Finalizado)
+        elif pagamento != 'Pago' and status != 'Cancelado':
+            total_pendente += valor
+            
+        transacoes.append(dict(ag))
+
+    total_saidas = 0.0 
+    saldo_atual = total_recebido - total_saidas
+
+    return render_template('financeiro.html', 
+                           total_recebido=total_recebido,
+                           total_pendente=total_pendente,
+                           total_saidas=total_saidas,
+                           saldo_atual=saldo_atual,
+                           transacoes=transacoes,
+                           # Passando os valores de volta para manter o form preenchido na tela
+                           filtros={
+                               'data_inicio': data_inicio,
+                               'data_fim': data_fim,
+                               'paciente': paciente_nome,
+                               'status': status_agendamento,
+                               'status_pagamento': status_pagamento,
+                               'procedimento': procedimento
+                           })

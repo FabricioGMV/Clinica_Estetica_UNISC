@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+
+{% block title %}Painel Financeiro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0"><i class="bi bi-graph-up-arrow text-success"></i> Visão Financeira</h2>
+</div>
+
+<div class="card shadow-sm border-0 mb-4 bg-light">
+    <div class="card-body">
+        <h6 class="card-title text-muted mb-3"><i class="bi bi-funnel"></i> Filtros de Busca</h6>
+        
+        <form method="GET" action="/financeiro" class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Data Inicial</label>
+                <input type="date" name="data_inicio" id="data_inicio" class="form-control form-control-sm" value="{{ filtros.data_inicio }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Data Final</label>
+                <input type="date" name="data_fim" id="data_fim" class="form-control form-control-sm" value="{{ filtros.data_fim }}">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Nome do Paciente</label>
+                <input type="text" name="paciente" class="form-control form-control-sm" placeholder="Ex: Maria Silva" value="{{ filtros.paciente }}">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Procedimento</label>
+                <input type="text" name="procedimento" class="form-control form-control-sm" placeholder="Ex: Botox" value="{{ filtros.procedimento }}">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Status da Sessão</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="Aguardando" {{ 'selected' if filtros.status == 'Aguardando' else '' }}>Aguardando</option>
+                    <option value="Confirmado" {{ 'selected' if filtros.status == 'Confirmado' else '' }}>Confirmado</option>
+                    <option value="Finalizado" {{ 'selected' if filtros.status == 'Finalizado' else '' }}>Finalizado</option>
+                    <option value="Cancelado" {{ 'selected' if filtros.status == 'Cancelado' else '' }}>Cancelado</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Pagamento</label>
+                <select name="status_pagamento" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="Pago" {{ 'selected' if filtros.status_pagamento == 'Pago' else '' }}>Pagos</option>
+                    <option value="Aguardando" {{ 'selected' if filtros.status_pagamento == 'Aguardando' else '' }}>Pendentes</option>
+                </select>
+            </div>
+
+            <div class="col-md-3 ms-auto d-flex gap-2">
+                <a href="/financeiro" class="btn btn-sm btn-outline-secondary w-100">Limpar</a>
+                <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-search"></i> Buscar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-success shadow">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase text-white-50">Entradas (Recebido)</h6>
+                <h3 class="mb-0">R$ {{ "{:,.2f}".format(total_recebido).replace(',', 'X').replace('.', ',').replace('X', '.') }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-primary shadow">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase text-white-50">Saldo em Caixa Atual</h6>
+                <h3 class="mb-0">R$ {{ "{:,.2f}".format(saldo_atual).replace(',', 'X').replace('.', ',').replace('X', '.') }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-dark bg-warning shadow">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase text-dark-50">A Receber (Pendentes)</h6>
+                <h3 class="mb-0">R$ {{ "{:,.2f}".format(total_pendente).replace(',', 'X').replace('.', ',').replace('X', '.') }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-danger shadow opacity-75">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase text-white-50">Saídas / Insumos (Em Breve)</h6>
+                <h3 class="mb-0">R$ {{ "{:,.2f}".format(total_saidas).replace(',', 'X').replace('.', ',').replace('X', '.') }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0"><i class="bi bi-list-check"></i> Detalhamento (Exibindo {{ transacoes|length }} resultados)</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0 text-center align-middle" id="tabelaTransacoes">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-start">Data</th>
+                        <th class="text-start">Paciente</th>
+                        <th class="text-start">Procedimento</th>
+                        <th>Valor (R$)</th>
+                        <th>Status Sessão</th>
+                        <th>Status Pgto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transacoes %}
+                    <tr class="transacao-row {{ 'table-secondary opacity-50' if t.status == 'Cancelado' else '' }}" data-date="{{ t.data_hora }}">
+                        <td class="text-start">
+                            {% if t.data_hora and t.data_hora|length >= 10 %}
+                                {{ t.data_hora[8:10] }}/{{ t.data_hora[5:7] }}/{{ t.data_hora[0:4] }}
+                            {% else %}
+                                {{ t.data_hora }}
+                            {% endif %}
+                        </td>
+                        <td class="text-start fw-bold">
+                            <a href="/paciente/{{ t.paciente_id }}" class="text-decoration-none text-dark">{{ t.nome_completo }}</a>
+                        </td>
+                        <td class="text-start">{{ t.tipo_procedimento }}</td>
+                        
+                        <td class="fw-semibold {{ 'text-decoration-line-through text-muted' if t.status == 'Cancelado' else 'text-success' if t.status_pagamento == 'Pago' else '' }}">
+                            R$ {{ "{:,.2f}".format(t.valor_cobrado | float).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+                        </td>
+                        
+                        <td>
+                            {% if t.status == 'Cancelado' %}
+                                <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Cancelado</span>
+                            {% elif t.status == 'Finalizado' %}
+                                <span class="badge bg-dark"><i class="bi bi-check2-all"></i> Finalizado</span>
+                            {% elif t.status == 'Confirmado' %}
+                                <span class="badge bg-primary">Confirmado</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Aguardando</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if t.status == 'Cancelado' %}
+                                <span class="badge bg-secondary">Anulado</span>
+                            {% elif t.status_pagamento == 'Pago' %}
+                                <span class="badge bg-success"><i class="bi bi-cash"></i> Pago</span>
+                            {% else %}
+                                <span class="badge border border-warning text-dark">Pendente</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-search fs-1 d-block mb-3"></i>
+                            Nenhuma movimentação financeira encontrada.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<nav aria-label="Navegação de transações">
+    <ul class="pagination justify-content-center" id="paginacaoFinanceiro">
+        </ul>
+</nav>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    
+    // --- 1. PREENCHIMENTO AUTOMÁTICO DAS DATAS DE FILTRO ---
+    const inputInicio = document.getElementById('data_inicio');
+    const inputFim = document.getElementById('data_fim');
+
+    // Se os campos vierem vazios (ex: ao clicar em "Limpar" ou acessar a página pela 1ª vez)
+    if (!inputInicio.value && !inputFim.value) {
+        const dataAtual = new Date();
+        const dataUmAnoAtras = new Date();
+        dataUmAnoAtras.setFullYear(dataAtual.getFullYear() - 1);
+
+        // Formata a data para o padrão do input type="date" (YYYY-MM-DD)
+        const formatarData = (data) => {
+            const ano = data.getFullYear();
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const dia = String(data.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        };
+
+        inputFim.value = formatarData(dataAtual); // Hoje
+        inputInicio.value = formatarData(dataUmAnoAtras); // 1 ano atrás
+    }
+
+
+    // --- 2. ORDENAÇÃO DA TABELA (Mais Recente Primeiro) ---
+    const tbody = document.querySelector('#tabelaTransacoes tbody');
+    let rows = Array.from(document.querySelectorAll('.transacao-row'));
+
+    if (rows.length > 0) {
+        rows.sort((a, b) => {
+            let dataStrA = a.getAttribute('data-date') || "";
+            let dataStrB = b.getAttribute('data-date') || "";
+            
+            // Substitui ' ' por 'T' para garantir que navegadores (como Safari) leiam a data corretamente
+            let dateA = new Date(dataStrA.replace(' ', 'T')).getTime() || 0;
+            let dateB = new Date(dataStrB.replace(' ', 'T')).getTime() || 0;
+            
+            return dateB - dateA; // Ordena de forma decrescente
+        });
+
+        // Reanexa as linhas na tabela já na ordem correta
+        rows.forEach(row => tbody.appendChild(row));
+    }
+
+
+    // --- 3. PAGINAÇÃO ---
+    const itemsPorPagina = 10;
+    let paginaAtual = 1;
+    const containerPaginacao = document.getElementById('paginacaoFinanceiro');
+
+    function atualizarTabela() {
+        if (rows.length === 0) return;
+
+        const totalPaginas = Math.ceil(rows.length / itemsPorPagina);
+        if (paginaAtual > totalPaginas) paginaAtual = totalPaginas || 1;
+
+        const indiceInicio = (paginaAtual - 1) * itemsPorPagina;
+        const indiceFim = indiceInicio + itemsPorPagina;
+
+        // Esconde e mostra baseado na página
+        rows.forEach((row, index) => {
+            if (index >= indiceInicio && index < indiceFim) {
+                row.style.display = ''; 
+            } else {
+                row.style.display = 'none'; 
+            }
+        });
+
+        renderizarBotoes(totalPaginas);
+    }
+
+    function renderizarBotoes(totalPaginas) {
+        containerPaginacao.innerHTML = ''; 
+
+        if (totalPaginas <= 1) return; 
+
+        // Botão "Anterior"
+        const btnAnterior = document.createElement('li');
+        btnAnterior.className = `page-item ${paginaAtual === 1 ? 'disabled' : ''}`;
+        btnAnterior.innerHTML = `<a class="page-link" href="#" aria-label="Anterior"><span aria-hidden="true">&laquo;</span></a>`;
+        btnAnterior.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (paginaAtual > 1) { 
+                paginaAtual--; 
+                atualizarTabela(); 
+            }
+        });
+        containerPaginacao.appendChild(btnAnterior);
+
+        // Botões Numéricos
+        for (let i = 1; i <= totalPaginas; i++) {
+            const btnNumero = document.createElement('li');
+            btnNumero.className = `page-item ${paginaAtual === i ? 'active' : ''}`;
+            btnNumero.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+            btnNumero.addEventListener('click', (e) => {
+                e.preventDefault();
+                paginaAtual = i;
+                atualizarTabela();
+            });
+            containerPaginacao.appendChild(btnNumero);
+        }
+
+        // Botão "Próximo"
+        const btnProximo = document.createElement('li');
+        btnProximo.className = `page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}`;
+        btnProximo.innerHTML = `<a class="page-link" href="#" aria-label="Próximo"><span aria-hidden="true">&raquo;</span></a>`;
+        btnProximo.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (paginaAtual < totalPaginas) { 
+                paginaAtual++; 
+                atualizarTabela(); 
+            }
+        });
+        containerPaginacao.appendChild(btnProximo);
+    }
+
+    atualizarTabela();
+});
+</script>
+{% endblock %}
