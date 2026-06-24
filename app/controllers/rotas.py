@@ -172,20 +172,20 @@ def editar_retorno(sessao_id):
     conn.close()
     return redirect(url_for('rotas.ver_sessoes_detalhadas', id=sessao['agendamento_id']))
 
-#13. Rota do Painel Financeiro (Atualizada com Filtros Avançados)
+#13. Rota do Painel Financeiro
 @rotas_bp.route('/financeiro')
 def financeiro():
     conn = get_db_connection()
 
-    # 1. Captura os filtros vindos da URL (se houver)
+    # 1. Captura os filtros vindos da URL
     data_inicio = request.args.get('data_inicio', '')
     data_fim = request.args.get('data_fim', '')
     paciente_nome = request.args.get('paciente', '').strip()
     status_agendamento = request.args.get('status', '')
     status_pagamento = request.args.get('status_pagamento', '')
-    procedimento = request.args.get('procedimento', '').strip()
+    procedimento = request.args.get('procedimento', '')
 
-    # 2. Monta a Query Base de forma inteligente
+    # 2. Monta a Query Base
     query = '''
         SELECT a.*, p.nome_completo 
         FROM agendamentos a
@@ -194,14 +194,12 @@ def financeiro():
     '''
     params = []
 
-    # 3. Aplica os filtros apenas se o usuário tiver preenchido algo
+    # 3. Aplica os filtros
     if data_inicio:
-        # Pega tudo a partir da data inicial (ignorando a hora)
         query += " AND date(a.data_hora) >= ?"
         params.append(data_inicio)
     
     if data_fim:
-        # Pega tudo até a data final
         query += " AND date(a.data_hora) <= ?"
         params.append(data_fim)
         
@@ -218,33 +216,27 @@ def financeiro():
         params.append(status_pagamento)
         
     if procedimento:
-        query += " AND a.tipo_procedimento LIKE ?"
-        params.append(f"%{procedimento}%")
+        # Busca EXATA pelo value limpo ("Drenagem Linfatica", "Outro", etc)
+        query += " AND a.tipo_procedimento = ?"
+        params.append(procedimento)
 
-    # Ordena para os mais recentes ficarem no topo
     query += " ORDER BY a.data_hora DESC"
 
-    # Executa a busca no Banco de Dados
     agendamentos_filtrados = conn.execute(query, params).fetchall()
     conn.close()
 
-    # 4. Variáveis do Painel
+    # 4. Processamento Matemático
     total_recebido = 0.0
     total_pendente = 0.0
     transacoes = []
 
-    # 5. Processamento Matemático (Calcula com base APENAS no que foi filtrado)
     for ag in agendamentos_filtrados:
         valor = float(ag['valor_cobrado'] if ag['valor_cobrado'] else 0)
         status = ag['status']
         pagamento = ag['status_pagamento']
         
-        # Só soma em RECEBIDO se estiver Pago E não for um agendamento Cancelado 
-        # (caso alguém tenha pago e depois cancelado, isso vira um caso de reembolso, não receita líquida)
         if pagamento == 'Pago' and status != 'Cancelado':
             total_recebido += valor
-            
-        # Só soma em PENDENTE se não estiver pago E o agendamento ainda estiver ativo (Aguardando/Confirmado/Finalizado)
         elif pagamento != 'Pago' and status != 'Cancelado':
             total_pendente += valor
             
@@ -259,7 +251,6 @@ def financeiro():
                            total_saidas=total_saidas,
                            saldo_atual=saldo_atual,
                            transacoes=transacoes,
-                           # Passando os valores de volta para manter o form preenchido na tela
                            filtros={
                                'data_inicio': data_inicio,
                                'data_fim': data_fim,
@@ -268,3 +259,107 @@ def financeiro():
                                'status_pagamento': status_pagamento,
                                'procedimento': procedimento
                            })
+
+#14. Rota de Estatísticas (Foco Operacional e Clínico)
+@rotas_bp.route('/estatisticas')
+def estatisticas():
+    conn = get_db_connection()
+    
+    # Métricas Operacionais
+    total_pacientes = conn.execute("SELECT COUNT(*) FROM pacientes").fetchone()[0]
+    total_agendamentos = conn.execute("SELECT COUNT(*) FROM agendamentos").fetchone()[0]
+    total_sessoes = conn.execute("SELECT COUNT(*) FROM procedimentos").fetchone()[0]
+    
+    cancelados = conn.execute("SELECT COUNT(*) FROM agendamentos WHERE status = 'Cancelado'").fetchone()[0]
+    
+    # Calcula a taxa de cancelamento
+    taxa_cancelamento = round((cancelados / total_agendamentos * 100), 1) if total_agendamentos > 0 else 0
+    
+    # Agendamentos por Status (Para o Gráfico de Barras)
+    status_counts = conn.execute("SELECT status, COUNT(*) as qtd FROM agendamentos GROUP BY status").fetchall()
+    labels_status = [row['status'] for row in status_counts]
+    dados_status = [row['qtd'] for row in status_counts]
+    
+    # Procedimentos mais agendados (Para o Gráfico de Pizza)
+    proc_counts = conn.execute("SELECT tipo_procedimento, COUNT(*) as qtd FROM agendamentos WHERE status != 'Cancelado' GROUP BY tipo_procedimento ORDER BY qtd DESC").fetchall()
+    labels_procedimentos = [row['tipo_procedimento'] for row in proc_counts]
+    dados_procedimentos = [row['qtd'] for row in proc_counts]
+    
+    conn.close()
+
+    return render_template('estatisticas.html', 
+                           total_pacientes=total_pacientes,
+                           total_agendamentos=total_agendamentos,
+                           total_sessoes=total_sessoes,
+                           taxa_cancelamento=taxa_cancelamento,
+                           labels_status=labels_status,
+                           dados_status=dados_status,
+                           labels_procedimentos=labels_procedimentos,
+                           dados_procedimentos=dados_procedimentos)
+
+
+#15. Rota de Relatórios (Foco em Vendas, BI e Exportação)
+@rotas_bp.route('/relatorios')
+def relatorios():
+    conn = get_db_connection()
+    
+    # 1. Pega a data atual e descobre qual foi o mês passado
+    now = datetime.datetime.now()
+    mes_atual_str = f"{now.year}-{now.month:02d}"
+    
+    primeiro_dia_mes = now.replace(day=1)
+    ultimo_dia_mes_passado = primeiro_dia_mes - datetime.timedelta(days=1)
+    mes_passado_str = f"{ultimo_dia_mes_passado.year}-{ultimo_dia_mes_passado.month:02d}"
+    
+    # 2. Receita: Mês Atual vs Mês Passado
+    receita_atual = conn.execute("SELECT SUM(valor_cobrado) FROM agendamentos WHERE status_pagamento = 'Pago' AND status != 'Cancelado' AND data_hora LIKE ?", (f"{mes_atual_str}-%",)).fetchone()[0] or 0
+    receita_passado = conn.execute("SELECT SUM(valor_cobrado) FROM agendamentos WHERE status_pagamento = 'Pago' AND status != 'Cancelado' AND data_hora LIKE ?", (f"{mes_passado_str}-%",)).fetchone()[0] or 0
+    
+    # 3. Calcula a % de Crescimento
+    if receita_passado > 0:
+        crescimento = ((receita_atual - receita_passado) / receita_passado) * 100
+    else:
+        crescimento = 100.0 if receita_atual > 0 else 0.0
+        
+    # 4. Top Procedimentos que dão mais LUCRO (Valor R$)
+    receita_por_proc = conn.execute('''
+        SELECT tipo_procedimento, SUM(valor_cobrado) as total_receita, COUNT(*) as qtd_vendas
+        FROM agendamentos 
+        WHERE status_pagamento = 'Pago' AND status != 'Cancelado'
+        GROUP BY tipo_procedimento 
+        ORDER BY total_receita DESC LIMIT 5
+    ''').fetchall()
+    top_procedimentos = [dict(row) for row in receita_por_proc]
+    
+    # 5. Receita Mensal dos últimos 6 meses (Para o Gráfico)
+    receita_mensal_db = conn.execute('''
+        SELECT substr(data_hora, 1, 7) as mes_ano, SUM(valor_cobrado) as total 
+        FROM agendamentos 
+        WHERE status_pagamento = 'Pago' AND status != 'Cancelado' 
+        GROUP BY mes_ano 
+        ORDER BY mes_ano DESC LIMIT 6
+    ''').fetchall()
+    
+    # Inverte para o gráfico ficar da esquerda (mais antigo) para a direita (mais novo)
+    meses_labels = [row['mes_ano'] for row in reversed(receita_mensal_db)]
+    receita_dados = [row['total'] for row in reversed(receita_mensal_db)]
+    
+    # 6. Dados Brutos para Exportar
+    dados_brutos = conn.execute('''
+        SELECT a.data_hora, p.nome_completo, a.tipo_procedimento, a.sessoes_previstas, a.valor_cobrado, a.status_pagamento, a.status
+        FROM agendamentos a
+        JOIN pacientes p ON a.paciente_id = p.id
+        ORDER BY a.data_hora DESC
+    ''').fetchall()
+    lista_relatorio = [dict(row) for row in dados_brutos]
+    
+    conn.close()
+
+    return render_template('relatorios.html', 
+                           lista_relatorio=lista_relatorio,
+                           receita_atual=receita_atual,
+                           receita_passado=receita_passado,
+                           crescimento=round(crescimento, 1),
+                           top_procedimentos=top_procedimentos,
+                           meses_labels=meses_labels,
+                           receita_dados=receita_dados)

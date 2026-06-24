@@ -28,7 +28,14 @@
 
             <div class="col-md-3">
                 <label class="form-label small fw-bold">Procedimento</label>
-                <input type="text" name="procedimento" class="form-control form-control-sm" placeholder="Ex: Botox" value="{{ filtros.procedimento }}">
+                <select name="procedimento" class="form-select form-select-sm">
+                    <option value="">Todos os procedimentos</option>
+                    <option value="Limpeza de Pele" {{ 'selected' if filtros.procedimento == 'Limpeza de Pele' else '' }}>Limpeza de Pele</option>
+                    <option value="Botox" {{ 'selected' if filtros.procedimento == 'Botox' else '' }}>Botox</option>
+                    <option value="Peeling" {{ 'selected' if filtros.procedimento == 'Peeling' else '' }}>Peeling</option>
+                    <option value="Drenagem Linfatica" {{ 'selected' if filtros.procedimento == 'Drenagem Linfatica' else '' }}>Drenagem Linfática</option>
+                    <option value="Outro" {{ 'selected' if filtros.procedimento == 'Outro' else '' }}>Outro...</option>
+                </select>
             </div>
 
             <div class="col-md-2">
@@ -180,13 +187,14 @@ document.addEventListener("DOMContentLoaded", function() {
     const inputInicio = document.getElementById('data_inicio');
     const inputFim = document.getElementById('data_fim');
 
-    // Se os campos vierem vazios (ex: ao clicar em "Limpar" ou acessar a página pela 1ª vez)
+    // Se o usuário ainda não enviou datas específicas na URL (primeiro acesso)
     if (!inputInicio.value && !inputFim.value) {
         const dataAtual = new Date();
-        const dataUmAnoAtras = new Date();
-        dataUmAnoAtras.setFullYear(dataAtual.getFullYear() - 1);
+        
+        // Criando a data final (Ano Atual + 1)
+        const dataFutura = new Date();
+        dataFutura.setFullYear(dataAtual.getFullYear() + 1);
 
-        // Formata a data para o padrão do input type="date" (YYYY-MM-DD)
         const formatarData = (data) => {
             const ano = data.getFullYear();
             const mes = String(data.getMonth() + 1).padStart(2, '0');
@@ -194,10 +202,10 @@ document.addEventListener("DOMContentLoaded", function() {
             return `${ano}-${mes}-${dia}`;
         };
 
-        inputFim.value = formatarData(dataAtual); // Hoje
-        inputInicio.value = formatarData(dataUmAnoAtras); // 1 ano atrás
+        // Aplica o seu plano brilhante:
+        inputInicio.value = "2020-01-01";         // Início bem retroativo para pegar tudo
+        inputFim.value = formatarData(dataFutura); // Fim com margem de segurança de +1 ano
     }
-
 
     // --- 2. ORDENAÇÃO DA TABELA (Mais Recente Primeiro) ---
     const tbody = document.querySelector('#tabelaTransacoes tbody');
@@ -208,17 +216,14 @@ document.addEventListener("DOMContentLoaded", function() {
             let dataStrA = a.getAttribute('data-date') || "";
             let dataStrB = b.getAttribute('data-date') || "";
             
-            // Substitui ' ' por 'T' para garantir que navegadores (como Safari) leiam a data corretamente
             let dateA = new Date(dataStrA.replace(' ', 'T')).getTime() || 0;
             let dateB = new Date(dataStrB.replace(' ', 'T')).getTime() || 0;
             
-            return dateB - dateA; // Ordena de forma decrescente
+            return dateB - dateA; 
         });
 
-        // Reanexa as linhas na tabela já na ordem correta
         rows.forEach(row => tbody.appendChild(row));
     }
-
 
     // --- 3. PAGINAÇÃO ---
     const itemsPorPagina = 10;
@@ -234,7 +239,6 @@ document.addEventListener("DOMContentLoaded", function() {
         const indiceInicio = (paginaAtual - 1) * itemsPorPagina;
         const indiceFim = indiceInicio + itemsPorPagina;
 
-        // Esconde e mostra baseado na página
         rows.forEach((row, index) => {
             if (index >= indiceInicio && index < indiceFim) {
                 row.style.display = ''; 
@@ -251,7 +255,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (totalPaginas <= 1) return; 
 
-        // Botão "Anterior"
         const btnAnterior = document.createElement('li');
         btnAnterior.className = `page-item ${paginaAtual === 1 ? 'disabled' : ''}`;
         btnAnterior.innerHTML = `<a class="page-link" href="#" aria-label="Anterior"><span aria-hidden="true">&laquo;</span></a>`;
@@ -264,7 +267,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
         containerPaginacao.appendChild(btnAnterior);
 
-        // Botões Numéricos
         for (let i = 1; i <= totalPaginas; i++) {
             const btnNumero = document.createElement('li');
             btnNumero.className = `page-item ${paginaAtual === i ? 'active' : ''}`;
@@ -277,7 +279,6 @@ document.addEventListener("DOMContentLoaded", function() {
             containerPaginacao.appendChild(btnNumero);
         }
 
-        // Botão "Próximo"
         const btnProximo = document.createElement('li');
         btnProximo.className = `page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}`;
         btnProximo.innerHTML = `<a class="page-link" href="#" aria-label="Próximo"><span aria-hidden="true">&raquo;</span></a>`;

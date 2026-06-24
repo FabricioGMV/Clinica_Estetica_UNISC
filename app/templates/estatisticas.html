@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}Estatísticas Clínicas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0"><i class="bi bi-pie-chart-fill text-info"></i> Estatísticas Operacionais</h2>
+    <a href="/relatorios" class="btn btn-outline-dark btn-sm">Ver Relatório de Vendas <i class="bi bi-arrow-right"></i></a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center shadow-sm border-0 h-100 bg-light">
+            <div class="card-body">
+                <h6 class="card-title text-muted text-uppercase mb-3">Pacientes Ativos</h6>
+                <h1 class="display-4 fw-bold text-primary">{{ total_pacientes }}</h1>
+                <p class="text-muted small">Cadastrados no sistema</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center shadow-sm border-0 h-100 bg-light">
+            <div class="card-body">
+                <h6 class="card-title text-muted text-uppercase mb-3">Agendamentos Totais</h6>
+                <h1 class="display-4 fw-bold text-dark">{{ total_agendamentos }}</h1>
+                <p class="text-muted small">Consultas/Procedimentos marcados</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center shadow-sm border-0 h-100 bg-light">
+            <div class="card-body">
+                <h6 class="card-title text-muted text-uppercase mb-3">Sessões Executadas</h6>
+                <h1 class="display-4 fw-bold text-success">{{ total_sessoes }}</h1>
+                <p class="text-muted small">Atendimentos finalizados na maca</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center shadow-sm border-0 h-100 {{ 'bg-danger text-white' if taxa_cancelamento > 20 else 'bg-light' }}">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase mb-3 {{ 'text-white-50' if taxa_cancelamento > 20 else 'text-muted' }}">Taxa de Cancelamento</h6>
+                <h1 class="display-4 fw-bold">{{ taxa_cancelamento }}%</h1>
+                <p class="small {{ 'text-white-50' if taxa_cancelamento > 20 else 'text-muted' }}">Média geral da clínica</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 text-muted"><i class="bi bi-bar-chart-fill"></i> Eficiência de Agendamentos (Status)</h6>
+            </div>
+            <div class="card-body" style="position: relative; height:300px; width:100%">
+                <canvas id="graficoStatus"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 text-muted"><i class="bi bi-pie-chart"></i> Proporção de Serviços Oferecidos</h6>
+            </div>
+            <div class="card-body" style="position: relative; height:300px; width:100%">
+                <canvas id="graficoProcedimentos"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    
+    // --- GRÁFICO 1: STATUS DE AGENDAMENTOS (BARRAS) ---
+    const ctxStatus = document.getElementById('graficoStatus').getContext('2d');
+    new Chart(ctxStatus, {
+        type: 'bar',
+        data: {
+            // Adicionado o filtro | safe para garantir que o JS leia como Array
+            labels: {{ labels_status | tojson | safe }},
+            datasets: [{
+                label: 'Quantidade',
+                data: {{ dados_status | tojson | safe }},
+                backgroundColor: ['#ffc107', '#0d6efd', '#198754', '#dc3545', '#6c757d'],
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // --- GRÁFICO 2: PROCEDIMENTOS OFERECIDOS (PIZZA) ---
+    const ctxProcedimentos = document.getElementById('graficoProcedimentos').getContext('2d');
+    new Chart(ctxProcedimentos, {
+        type: 'doughnut',
+        data: {
+            // Adicionado o filtro | safe
+            labels: {{ labels_procedimentos | tojson | safe }},
+            datasets: [{
+                data: {{ dados_procedimentos | tojson | safe }},
+                backgroundColor: ['#0d6efd', '#0dcaf0', '#20c997', '#ffc107', '#fd7e14', '#dc3545'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'right' } }
+        }
+    });
+});
+</script>
+{% endblock %}
