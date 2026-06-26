@@ -8,7 +8,34 @@ rotas_bp = Blueprint('rotas', __name__)
 #1. Rota principal
 @rotas_bp.route('/')
 def index():
-    return render_template('index.html')
+    conn = get_db_connection()
+    
+    # 1. Conta o Total de Pacientes cadastrados
+    total_pacientes = conn.execute("SELECT COUNT(*) FROM pacientes").fetchone()[0]
+    
+    # 2. Conta Agendamentos que estão com status 'Aguardando'
+    agendamentos_pendentes = conn.execute("SELECT COUNT(*) FROM agendamentos WHERE status = 'Aguardando'").fetchone()[0]
+    
+    # 3. Calcula a Receita do Mês Atual
+    now = datetime.datetime.now()
+    mes_atual_str = f"{now.year}-{now.month:02d}"
+    
+    receita_bruta = conn.execute(
+        "SELECT SUM(valor_cobrado) FROM agendamentos WHERE status_pagamento = 'Pago' AND status != 'Cancelado' AND data_hora LIKE ?", 
+        (f"{mes_atual_str}-%",)
+    ).fetchone()[0]
+    
+    # Se não houver receita, garante que seja 0. Se houver, formata para o padrão Brasileiro (ex: 1.200,50)
+    receita_total = float(receita_bruta) if receita_bruta else 0.0
+    receita_formatada = "{:,.2f}".format(receita_total).replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    conn.close()
+
+    # Envia todos esses dados para o seu index.html
+    return render_template('index.html', 
+                           total_pacientes=total_pacientes, 
+                           agendamentos_pendentes=agendamentos_pendentes, 
+                           receita_total=receita_formatada)
 
 #2. Rota da lista de pacientes
 @rotas_bp.route('/pacientes')
@@ -54,7 +81,41 @@ def perfil_paciente(id):
 
     return render_template('perfil_paciente.html', paciente=paciente, agendamentos=agendamentos_ordenados)
 
-#5. Rota para agendar nova consulta
+#5. Rota para Visualizar Detalhes e Editar dados/foto do Paciente
+@rotas_bp.route('/paciente/<int:id>/detalhes', methods=['GET', 'POST'])
+def detalhes_paciente(id):
+    paciente = paciente_service.obter_paciente(id)
+    
+    if request.method == 'POST':
+        # Aqui enviamos tanto os dados textuais quanto os arquivos (foto)
+        # Se o seu paciente_service.atualizar_pacientes não aceitar arquivos ainda, 
+        # você pode tratar o upload da foto diretamente aqui ou passar request.files
+        paciente_service.atualizar_pacientes(id, request.form)
+        
+        # Exemplo de tratamento de foto direto na rota se preferir simplificar:
+        if 'foto_perfil' in request.files:
+            file = request.files['foto_perfil']
+            if file and file.filename != '':
+                # Supondo que você salve na pasta correspondente
+                filename = f"paciente_{id}.jpg"
+                import os
+                # Define o caminho para a pasta static do projeto
+                basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+                upload_path = os.path.join(basedir, 'app', 'static', 'uploads', 'perfis')
+                os.makedirs(upload_path, exist_ok=True)
+                file.save(os.path.join(upload_path, filename))
+                
+                # Salva o caminho/nome da foto no banco de dados se tiver a coluna
+                conn = get_db_connection()
+                conn.execute('UPDATE pacientes SET email = ? WHERE id = ?', (paciente['email'], id)) # Ajuste conforme seu banco
+                conn.close()
+        
+        flash('Dados do paciente atualizados com sucesso!', 'success')
+        return redirect(url_for('rotas.detalhes_paciente', id=id))
+        
+    return render_template('detalhes_paciente.html', paciente=paciente)
+
+#6. Rota para agendar nova consulta
 @rotas_bp.route('/paciente/<int:id>/agendar', methods=['GET', 'POST'])
 def novo_agendamento(id):
     paciente = paciente_service.obter_paciente(id)
@@ -66,7 +127,7 @@ def novo_agendamento(id):
     
     return render_template('form_agendamento.html', paciente=paciente)
 
-#6. Rota para editar paciente
+#7. Rota para editar paciente
 @rotas_bp.route('/paciente/<int:id>/editar', methods=['GET', 'POST'])
 def editar_paciente(id):
     paciente = paciente_service.obter_paciente(id)
@@ -77,7 +138,7 @@ def editar_paciente(id):
     
     return render_template('form_paciente.html', paciente=paciente)
 
-#7. Rota para editar agendamento (CORRIGIDA A PROTEÇÃO DOS CAMPOS BLOQUEADOS)
+#8. Rota para editar agendamento (CORRIGIDA A PROTEÇÃO DOS CAMPOS BLOQUEADOS)
 @rotas_bp.route('/agendamento/<int:id>/editar', methods=['GET', 'POST'])
 def editar_agendamento(id):
     agendamento = dict(agendamento_service.obter_agendamento(id)) # Transformado em dicionário
@@ -109,14 +170,14 @@ def editar_agendamento(id):
     
     return render_template('form_agendamento.html', agendamento=agendamento, paciente=paciente, qtd_sessoes=qtd_sessoes)
 
-#8. Rota para editar pagamento do agendamento
+#9. Rota para editar pagamento do agendamento
 @rotas_bp.route('/agendamento/<int:id>/pagar', methods=['POST'])
 def pagar_agendamento(id):
     agendamento = agendamento_service.obter_agendamento(id)
     agendamento_service.confirmar_pagamento_e_agendamento(id)
     return redirect(url_for('rotas.perfil_paciente', id=agendamento['paciente_id']))
 
-#9. Rota para registrar sessão (ATUALIZADA PARA INJETAR QTD_SESSOES NO TEMPLATE)
+#10. Rota para registrar sessão (ATUALIZADA PARA INJETAR QTD_SESSOES NO TEMPLATE)
 @rotas_bp.route('/agendamento/<int:id>/registrar_sessao', methods=['GET', 'POST'])
 def registrar_sessao(id):
     agendamento = agendamento_service.obter_agendamento(id)
@@ -134,7 +195,7 @@ def registrar_sessao(id):
     # Repassado "qtd_sessoes" para que o form_procedimento saiba se exige retorno ou não
     return render_template('form_procedimento.html', agendamento=agendamento, paciente=paciente, qtd_sessoes=qtd_sessoes)
 
-#10. Rota inteligente para Finalizar ou Cancelar via botões rápidos (Modal do perfil)
+#11. Rota inteligente para Finalizar ou Cancelar via botões rápidos (Modal do perfil)
 @rotas_bp.route('/agendamento/<int:id>/mudar_status/<novo_status>', methods=['POST'])
 def mudar_status_agendamento(id, novo_status):
     conn = get_db_connection()
@@ -147,7 +208,7 @@ def mudar_status_agendamento(id, novo_status):
     
     return redirect(url_for('rotas.perfil_paciente', id=agendamento['paciente_id']))
 
-#11. Rota para visualizar todas as sessões de um procedimento específico de forma detalhada
+#12. Rota para visualizar todas as sessões de um procedimento específico de forma detalhada
 @rotas_bp.route('/agendamento/<int:id>/sessoes')
 def ver_sessoes_detalhadas(id):
     agendamento = agendamento_service.obter_agendamento(id)
@@ -156,7 +217,7 @@ def ver_sessoes_detalhadas(id):
     
     return render_template('sessoes_detalhadas.html', agendamento=agendamento, paciente=paciente, sessoes=sessoes)
 
-#12. Rota opcional para editar apenas a data de retorno de uma sessão específica (enquanto pendente)
+#13. Rota opcional para editar apenas a data de retorno de uma sessão específica (enquanto pendente)
 @rotas_bp.route('/sessao/<int:sessao_id>/editar_retorno', methods=['POST'])
 def editar_retorno(sessao_id):
     nova_data = request.form.get('data_hora_retorno')
@@ -172,7 +233,7 @@ def editar_retorno(sessao_id):
     conn.close()
     return redirect(url_for('rotas.ver_sessoes_detalhadas', id=sessao['agendamento_id']))
 
-#13. Rota do Painel Financeiro
+#14. Rota do Painel Financeiro
 @rotas_bp.route('/financeiro')
 def financeiro():
     conn = get_db_connection()
@@ -260,7 +321,7 @@ def financeiro():
                                'procedimento': procedimento
                            })
 
-#14. Rota de Estatísticas (Foco Operacional e Clínico)
+#15. Rota de Estatísticas (Foco Operacional e Clínico)
 @rotas_bp.route('/estatisticas')
 def estatisticas():
     conn = get_db_connection()
@@ -298,7 +359,7 @@ def estatisticas():
                            dados_procedimentos=dados_procedimentos)
 
 
-#15. Rota de Relatórios (Foco em Vendas, BI e Exportação)
+#16. Rota de Relatórios (Foco em Vendas, BI e Exportação)
 @rotas_bp.route('/relatorios')
 def relatorios():
     conn = get_db_connection()

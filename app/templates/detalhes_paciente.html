@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhes de {{ paciente.nome_completo }} - Estética UNISC{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="text-primary fw-bold">Ficha Cadastral do Paciente</h2>
+            <p class="text-muted mb-0">Gerencie e atualize as informações fundamentais e anamnese.</p>
+        </div>
+        <a href="/pacientes" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar para Lista
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm border-0 h-100 text-center">
+            <div class="card-body d-flex flex-column justify-content-center align-items-center py-5">
+                <div class="mb-4 position-relative">
+                    <img src="/static/uploads/perfis/paciente_{{ paciente.id }}.jpg" 
+                         onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
+                         alt="Foto de {{ paciente.nome_completo }}" 
+                         class="rounded-circle img-thumbnail shadow-sm" 
+                         style="width: 160px; height: 160px; object-fit: cover;">
+                </div>
+                
+                <h4 class="fw-bold text-dark mb-1">{{ paciente.nome_completo }}</h4>
+                <p class="text-muted small mb-3">ID do Paciente: #{{ paciente.id }}</p>
+                
+                <hr class="w-100 text-muted my-3">
+                
+                <div class="text-start w-100 px-3">
+                    <p class="mb-2">
+                        <strong><i class="bi bi-telephone text-primary me-2"></i> Telefone:</strong> <br>
+                        {% if paciente.telefone %}
+                            <a href="https://wa.me/{{ paciente.telefone | replace('+', '') | replace(' ', '') | replace('-', '') }}" target="_blank" class="text-decoration-none">
+                                <i class="bi bi-whatsapp text-success me-1"></i>
+                                <span class="text-muted">{{ paciente.telefone[:3] ~ ' ' ~ paciente.telefone[3:5] ~ ' ' ~ paciente.telefone[5:10] ~ '-' ~ paciente.telefone[10:] if paciente.telefone and paciente.telefone|length >= 13 else paciente.telefone }}</span>
+                            </a>
+                        {% else %}
+                            <span class="text-muted">Não informado</span>
+                        {% endif %}
+                    </p>
+                    <p class="mb-0"><strong><i class="bi bi-envelope text-primary me-2"></i> E-mail:</strong> <br><span class="text-muted text-break">{{ paciente.email or 'Não informado' }}</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Editar Informações</h5>
+            </div>
+            <div class="card-body p-4">
+                <form id="formDetalhesPaciente" action="/paciente/{{ paciente.id }}/detalhes" method="POST" enctype="multipart/form-data">
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="nome_completo" class="form-label fw-semibold">Nome Completo</label>
+                            <input type="text" class="form-control" id="nome_completo" name="nome_completo" value="{{ paciente.nome_completo }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="email" class="form-label fw-semibold">E-mail</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ paciente.email or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="telefone" class="form-label fw-semibold">Telefone</label>
+                            <input type="text" class="form-control" id="telefone" name="telefone" value="{{ paciente.telefone or '' }}" placeholder="+55 11 90000-0000 ou +1 555...">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="cpf" class="form-label fw-semibold">CPF</label>
+                            <input type="text" class="form-control" id="cpf" name="cpf" value="{{ paciente.cpf or '' }}" placeholder="000.000.000-00">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="data_nascimento" class="form-label fw-semibold">Data de Nascimento</label>
+                            <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" value="{{ paciente.data_nascimento or '' }}">
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <label for="foto_perfil" class="form-label fw-semibold">Atualizar Foto de Perfil</label>
+                            <input type="file" class="form-control" id="foto_perfil" name="foto_perfil" accept="image/*">
+                            <div class="form-text">Envie um arquivo quadrado em formatos PNG ou JPG para melhor enquadramento.</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="historico_medico" class="form-label fw-semibold">Histórico Médico / Anamnese</label>
+                        <textarea class="form-control" id="historico_medico" name="historico_medico" rows="4">{{ paciente.historico_medico or '' }}</textarea>
+                    </div>
+
+                    <div class="card bg-light border-0 p-3 mb-4">
+                        <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-shield-check me-2"></i>Consentimentos Legais</h6>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" role="switch" id="termo_consentimento" name="termo_consentimento" value="1" {% if paciente.termo_consentimento %}checked{% endif %}>
+                            <label class="form-check-label text-dark" for="termo_consentimento">Termo de Consentimento Assinado</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="autorizacao_imagem" name="autorizacao_imagem" value="1" {% if paciente.autorizacao_imagem %}checked{% endif %}>
+                            <label class="form-check-label text-dark" for="autorizacao_imagem">Autorização para Uso de Imagem</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Salvar Alterações</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const cpfInput = document.getElementById('cpf');
+        const telInput = document.getElementById('telefone');
+        const dataInput = document.getElementById('data_nascimento'); 
+        const form = document.getElementById('formDetalhesPaciente');
+
+        // --- Máscara CPF (XXX.XXX.XXX-XX) ---
+        if (cpfInput) {
+            cpfInput.addEventListener('input', function (e) {
+                let v = e.target.value.replace(/\D/g, ''); 
+                if (v.length > 11) v = v.substring(0, 11); 
+                v = v.replace(/(\d{3})(\d)/, '$1.$2');
+                v = v.replace(/(\d{3})(\d)/, '$1.$2');
+                v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                e.target.value = v;
+            });
+
+            // Dispara evento para formatar caso já venha preenchido do banco
+            if(cpfInput.value) {
+                cpfInput.dispatchEvent(new Event('input'));
+            }
+        }
+
+        // --- Nova Máscara Dinâmica de Telefone ---
+        if (telInput) {
+            telInput.addEventListener('input', function (e) {
+                let raw = e.target.value;
+                // Mantém apenas o '+' e os números
+                let v = raw.replace(/[^\d+]/g, ''); 
+                
+                if (v.length === 0) {
+                    e.target.value = '';
+                    return;
+                }
+
+                // Força que a string inicie com '+'
+                if (v[0] !== '+') {
+                    v = '+' + v.replace(/\+/g, '');
+                } else {
+                    v = '+' + v.substring(1).replace(/\+/g, '');
+                }
+
+                // Regra: Se for +55, aplica a máscara Brasileira
+                if (v.startsWith('+55')) {
+                    let numerosBr = v.substring(3); 
+                    if (numerosBr.length > 11) numerosBr = numerosBr.substring(0, 11); 
+                    
+                    let masked = '+55';
+                    if (numerosBr.length > 0) {
+                        masked += ' ' + numerosBr.substring(0, 2); 
+                    }
+                    if (numerosBr.length > 2) {
+                        if (numerosBr.length <= 10) {
+                            masked += ' ' + numerosBr.substring(2, 6);
+                            if (numerosBr.length > 6) {
+                                masked += '-' + numerosBr.substring(6, 10);
+                            }
+                        } else {
+                            masked += ' ' + numerosBr.substring(2, 7);
+                            masked += '-' + numerosBr.substring(7, 11);
+                        }
+                    }
+                    e.target.value = masked;
+                } 
+                // Regra: Se for qualquer outro DDI, máscara livre
+                else {
+                    if (v.length > 16) v = v.substring(0, 16); 
+                    e.target.value = v; 
+                }
+            });
+
+            // Dispara evento para formatar caso já venha preenchido do banco
+            if(telInput.value) {
+                telInput.dispatchEvent(new Event('input'));
+            }
+        }
+
+        // --- Validações de Envio ao Salvar ---
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                
+                // 1. Validação da Data de Nascimento
+                if (dataInput && dataInput.value) {
+                    let anoDigitado = parseInt(dataInput.value.split('-')[0]); 
+                    let anoAtual = new Date().getFullYear();
+
+                    if (anoDigitado < 1900 || anoDigitado > anoAtual) {
+                        e.preventDefault(); 
+                        alert(`Erro: O ano de nascimento (${anoDigitado}) é inválido. Insira um ano entre 1900 e ${anoAtual}.`);
+                        dataInput.focus();
+                        return; 
+                    }
+                }
+
+                // 2. Validação do CPF: Se preenchido, DEVE ter 11 números
+                if (cpfInput && cpfInput.value) {
+                    let cpfNumeros = cpfInput.value.replace(/\D/g, '');
+                    if (cpfNumeros.length > 0 && cpfNumeros.length !== 11) {
+                        e.preventDefault(); 
+                        alert('Erro: O CPF precisa ter exatamente 11 dígitos.');
+                        cpfInput.focus();
+                        return; 
+                    }
+                }
+
+                // 3. Validação Flexível do Telefone
+                if (telInput && telInput.value) {
+                    let textVal = telInput.value;
+                    let telNumeros = textVal.replace(/\D/g, '');
+                    
+                    if (textVal.startsWith('+55')) {
+                        if (telNumeros.length > 0 && (telNumeros.length < 12 || telNumeros.length > 13)) {
+                            e.preventDefault();
+                            alert('Erro: Para números do Brasil (+55), insira o DDD e o número correto (10 ou 11 dígitos).');
+                            telInput.focus();
+                            return;
+                        }
+                    } 
+                    else {
+                        if (telNumeros.length > 0 && telNumeros.length < 8) {
+                            e.preventDefault();
+                            alert('Erro: O telefone internacional parece muito curto. Verifique o DDI e o número.');
+                            telInput.focus();
+                            return;
+                        }
+                    }
+                }
+
+                // 4. Limpeza final para salvar no Banco de Dados
+                if (cpfInput && cpfInput.value) {
+                    cpfInput.value = cpfInput.value.replace(/\D/g, '');
+                }
+                if (telInput && telInput.value) {
+                    telInput.value = telInput.value.replace(/[^\d+]/g, '');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
