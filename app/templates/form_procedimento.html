@@ -1,78 +1,184 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Registrar Sessão</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <div class="container mt-5">
+{% extends 'base.html' %}
+
+{% block title %}Registrar Sessão - Estética{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
         <div class="card shadow-sm border-primary">
             <div class="card-header bg-primary text-white">
-                <h4 class="mb-0">Registrar Atendimento: {{ paciente.nome_completo }}</h4>
-                <small>Procedimento: {{ agendamento.tipo_procedimento }}</small>
+                <h4 class="mb-0"><i class="bi bi-clipboard2-pulse"></i> Registrar Atendimento</h4>
+                <small>Paciente: {{ paciente.nome_completo }} | Procedimento: {{ agendamento.tipo_procedimento }}</small>
             </div>
             <div class="card-body">
-                <form method="POST" enctype="multipart/form-data">
+                <form method="POST" id="formRegistroSessao" enctype="multipart/form-data">
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label>Início da Sessão</label>
-                            <input type="datetime-local" name="data_hora_iniciado" class="form-control" required>
+                            <label class="form-label fw-semibold">Início da Sessão</label>
+                            <input type="datetime-local" id="data_hora_iniciado" name="data_hora_iniciado" class="form-control" required>
                         </div>
                         <div class="col-md-6">
-                            <label>Término da Sessão</label>
-                            <input type="datetime-local" name="data_hora_finalizacao" class="form-control" required>
+                            <label class="form-label fw-semibold">Término da Sessão</label>
+                            <input type="datetime-local" id="data_hora_finalizacao" name="data_hora_finalizacao" class="form-control" required>
                         </div>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label>Aluno Responsável</label>
+                            <label class="form-label fw-semibold">Aluno Responsável</label>
                             <input type="text" name="aluno_responsavel" class="form-control" required>
                         </div>
                         <div class="col-md-6">
-                            <label>Professor Supervisor</label>
+                            <label class="form-label fw-semibold">Professor Supervisor</label>
                             <input type="text" name="professor_supervisor" class="form-control" required>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label>Ações Realizadas (Descrição técnica detalhada)</label>
+                        <label class="form-label fw-semibold">Ações Realizadas (Descrição técnica detalhada)</label>
                         <textarea name="acoes_realizadas" class="form-control" rows="3" placeholder="Ex: Aplicação de toxina botulínica 20 unidades..." required></textarea>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label>Foto Antes</label>
+                            <label class="form-label fw-semibold"><i class="bi bi-camera"></i> Foto Antes</label>
                             <input type="file" name="foto_antes" class="form-control" accept="image/*">
                         </div>
                         <div class="col-md-6">
-                            <label>Foto Depois</label>
+                            <label class="form-label fw-semibold"><i class="bi bi-camera-fill"></i> Foto Depois</label>
                             <input type="file" name="foto_depois" class="form-control" accept="image/*">
                         </div>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label>Receitas / Recomendações pós-procedimento</label>
+                            <label class="form-label fw-semibold">Receitas / Recomendações pós-procedimento</label>
                             <textarea name="receitas_recomendadas" class="form-control" rows="2"></textarea>
                         </div>
                         <div class="col-md-6">
-                            <label>Observações da Execução (Intercorrências, etc.)</label>
+                            <label class="form-label fw-semibold">Observações da Execução (Intercorrências, etc.)</label>
                             <textarea name="observacoes_execucao" class="form-control" rows="2"></textarea>
                         </div>
                     </div>
 
-                    <div class="mb-4">
-                        <label class="text-success fw-bold">Observação Final da Sessão (Evolução geral)</label>
-                        <input type="text" name="observacao_final" class="form-control" placeholder="Como o paciente reagiu ao tratamento hoje?">
+                    <div class="mb-4 p-3 bg-light rounded border-start border-success border-4">
+                        <label class="text-success fw-bold form-label">Observação Final da Sessão (Evolução geral)</label>
+                        <input type="text" name="observacao_final" class="form-control border-success" placeholder="Como o paciente reagiu ao tratamento hoje?">
                     </div>
 
-                    <button type="submit" class="btn btn-primary">Salvar Registro da Sessão</button>
-                    <a href="/paciente/{{ paciente.id }}" class="btn btn-secondary">Cancelar</a>
+                    {% if agendamento.sessoes_previstas > 1 %}
+                        {% set total_sessoes_feitas = qtd_sessoes if qtd_sessoes is defined else 0 %}
+                        {% set precisa_retorno = total_sessoes_feitas + 1 < agendamento.sessoes_previstas %}
+
+                    <div class="mb-4 p-3 bg-white rounded border {{ 'border-warning shadow-sm' if precisa_retorno else 'border-secondary' }}">
+                        <label class="form-label fw-bold {{ 'text-danger' if precisa_retorno else 'text-muted' }}">
+                            <i class="bi bi-calendar-plus"></i> Agendar Próxima Sessão (Retorno) {{ '*' if precisa_retorno else '(Opcional)' }}
+                        </label>
+                        <p class="text-muted small mb-2">
+                            Este procedimento tem {{ agendamento.sessoes_previstas }} sessões previstas. 
+                            {% if precisa_retorno %}
+                                <span class="text-danger fw-bold">Atenção: Como ainda há sessões pendentes no cronograma básico, definir a data do retorno é obrigatório!</span>
+                            {% else %}
+                                Como o cronograma previsto original de {{ agendamento.sessoes_previstas }} sessões foi alcançado, novos retornos tornam-se sessões extras de acompanhamento opcional.
+                            {% endif %}
+                        </p>
+                        <input type="datetime-local" id="data_hora_retorno" name="data_hora_retorno" class="form-control {{ 'border-danger' if precisa_retorno else '' }}" {{ 'required' if precisa_retorno else '' }}>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="/paciente/{{ paciente.id }}" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Salvar Registro</button>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const formSessao = document.getElementById('formRegistroSessao');
+        const inputInicio = document.getElementById('data_hora_iniciado');
+        const inputFim = document.getElementById('data_hora_finalizacao');
+        const inputRetorno = document.getElementById('data_hora_retorno'); // Pode não existir se a sessão for única
+
+        if (formSessao) {
+            formSessao.addEventListener('submit', function(event) {
+                let dataAtual = new Date();
+                
+                // 1. Validação da Sessão Atual (Início e Fim)
+                if (inputInicio && inputInicio.value) {
+                    let inicioDigitado = new Date(inputInicio.value);
+                    
+                    // O registro não pode ter acontecido no futuro
+                    if (inicioDigitado > dataAtual) {
+                        event.preventDefault();
+                        alert("Erro: O início da sessão não pode ser uma data/hora no futuro.");
+                        inputInicio.focus();
+                        return;
+                    }
+                    
+                    // O registro não pode ser de um ano antes (para evitar digitação 0001)
+                    let limitePassado = new Date();
+                    limitePassado.setFullYear(dataAtual.getFullYear() - 1);
+                    if (inicioDigitado < limitePassado) {
+                        event.preventDefault();
+                        alert("Erro: O ano de início da sessão é inválido ou muito antigo.");
+                        inputInicio.focus();
+                        return;
+                    }
+                }
+
+                if (inputFim && inputFim.value) {
+                    let fimDigitado = new Date(inputFim.value);
+                    let inicioDigitado = new Date(inputInicio.value);
+                    
+                    if (fimDigitado > dataAtual) {
+                        event.preventDefault();
+                        alert("Erro: O término da sessão não pode ser uma data/hora no futuro.");
+                        inputFim.focus();
+                        return;
+                    }
+                    
+                    if (fimDigitado < inicioDigitado) {
+                        event.preventDefault();
+                        alert("Erro: O término da sessão não pode ser anterior ao início.");
+                        inputFim.focus();
+                        return;
+                    }
+                }
+
+                // 2. Validação da Data de Retorno (Passado e Limite Futuro de 1 Ano)
+                if (inputRetorno && inputRetorno.value) {
+                    let retornoDigitado = new Date(inputRetorno.value);
+                    
+                    // Limite Máximo: Data de Hoje + 1 Ano
+                    let dataLimite = new Date();
+                    dataLimite.setFullYear(dataAtual.getFullYear() + 1);
+
+                    if (retornoDigitado > dataLimite) {
+                        event.preventDefault(); 
+                        alert("Erro: Não é possível agendar um retorno com mais de 1 ano de antecedência.");
+                        inputRetorno.focus();
+                        return;
+                    }
+
+                    // Limite Mínimo: Passado (com tolerância de 30 minutos)
+                    let dataMinima = new Date();
+                    dataMinima.setMinutes(dataMinima.getMinutes() - 30);
+
+                    if (retornoDigitado < dataMinima) {
+                        event.preventDefault(); 
+                        alert("Erro: A data e hora do retorno não podem estar no passado.");
+                        inputRetorno.focus();
+                        return;
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

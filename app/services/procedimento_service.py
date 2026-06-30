@@ -25,19 +25,27 @@ def registrar_procedimento(agendamento_id, paciente_id, dados, arquivos):
         foto_depois_nome = f"depois_{agendamento_id}_{numero_sessao}_{secure_filename(foto.filename)}"
         foto.save(os.path.join(UPLOAD_FOLDER, foto_depois_nome))
 
+    data_retorno = dados.get('data_hora_retorno') if dados.get('data_hora_retorno') != '' else None
+
     conn.execute('''
         INSERT INTO procedimentos 
         (agendamento_id, paciente_id, numero_sessao, data_hora_iniciado, data_hora_finalizacao, 
          acoes_realizadas, aluno_responsavel, professor_supervisor, receitas_recomendadas, 
-         foto_antes, foto_depois, observacoes_execucao, observacao_final)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         foto_antes, foto_depois, observacoes_execucao, observacao_final, data_hora_retorno)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         agendamento_id, paciente_id, numero_sessao, 
         dados['data_hora_iniciado'], dados['data_hora_finalizacao'],
         dados['acoes_realizadas'], dados['aluno_responsavel'], dados['professor_supervisor'],
         dados['receitas_recomendadas'], foto_antes_nome, foto_depois_nome,
-        dados['observacoes_execucao'], dados['observacao_final']
+        dados['observacoes_execucao'], dados['observacao_final'], data_retorno
     ))
+    
+    conn.execute('''
+        UPDATE procedimentos 
+        SET status_retorno = 'Realizado' 
+        WHERE agendamento_id = ? AND numero_sessao = ?
+    ''', (agendamento_id, total_sessoes))
     
     conn.commit()
     conn.close()

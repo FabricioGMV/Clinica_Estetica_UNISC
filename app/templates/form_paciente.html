@@ -14,7 +14,7 @@
                         <h4 class="mb-0">{{ 'Editar Paciente' if paciente else 'Cadastrar Novo Paciente' }}</h4>
                     </div>
                     <div class="card-body">
-                        <form method="POST" action="{{ '/paciente/' ~ paciente.id ~ '/editar' if paciente else '/paciente/novo' }}">
+                        <form id="formPaciente" method="POST" action="{{ '/paciente/' ~ paciente.id ~ '/editar' if paciente else '/paciente/novo' }}">
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label>Nome Completo</label>
@@ -22,22 +22,22 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label>E-mail</label>
-                                    <input type="email" name="email" class="form-control" value="{{ paciente.email if paciente else '' }}">
+                                    <input type="email" name="email" class="form-control" value="{{ paciente.email if paciente else '' }}" required>
                                 </div>
                             </div>
                             
                             <div class="row mb-3">
                                 <div class="col-md-4">
                                     <label>Telefone / WhatsApp</label>
-                                    <input type="text" name="telefone" class="form-control" value="{{ paciente.telefone if paciente else '' }}" required>
+                                    <input type="text" name="telefone" id="telefone" class="form-control" value="{{ paciente.telefone if paciente else '' }}" required placeholder="+55 11 90000-0000 ou +1 555...">
                                 </div>
                                 <div class="col-md-4">
                                     <label>CPF</label>
-                                    <input type="text" name="cpf" class="form-control" value="{{ paciente.cpf if paciente else '' }}">
+                                    <input type="text" name="cpf" id="cpf" class="form-control" value="{{ paciente.cpf if paciente else '' }}" placeholder="000.000.000-00" required>
                                 </div>
                                 <div class="col-md-4">
                                     <label>Data de Nascimento</label>
-                                    <input type="date" name="data_nascimento" class="form-control" value="{{ paciente.data_nascimento if paciente else '' }}">
+                                    <input type="date" name="data_nascimento" id="data_nascimento" class="form-control" value="{{ paciente.data_nascimento if paciente else '' }}" required>
                                 </div>
                             </div>
 
@@ -47,11 +47,11 @@
                             </div>
 
                             <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="termo_consentimento" id="termo" {% if paciente and paciente.termo_consentimento %}checked{% endif %}>
+                                <input class="form-check-input" type="checkbox" name="termo_consentimento" id="termo" {% if paciente and paciente.termo_consentimento %}checked{% endif %} required>
                                 <label class="form-check-label" for="termo">Assinou Termo de Consentimento?</label>
                             </div>
                             <div class="form-check mb-4">
-                                <input class="form-check-input" type="checkbox" name="autorizacao_imagem" id="imagem" {% if paciente and paciente.autorizacao_imagem %}checked{% endif %}>
+                                <input class="form-check-input" type="checkbox" name="autorizacao_imagem" id="imagem" {% if paciente and paciente.autorizacao_imagem %}checked{% endif %} required>
                                 <label class="form-check-label" for="imagem">Autorizou Uso de Imagem?</label>
                             </div>
 
@@ -63,5 +63,146 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cpfInput = document.getElementById('cpf');
+            const telInput = document.getElementById('telefone');
+            const dataInput = document.getElementById('data_nascimento'); 
+            const form = document.getElementById('formPaciente');
+
+            // --- Máscara CPF (XXX.XXX.XXX-XX) ---
+            if (cpfInput) {
+                cpfInput.addEventListener('input', function (e) {
+                    let v = e.target.value.replace(/\D/g, ''); 
+                    if (v.length > 11) v = v.substring(0, 11); 
+                    v = v.replace(/(\d{3})(\d)/, '$1.$2');
+                    v = v.replace(/(\d{3})(\d)/, '$1.$2');
+                    v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                    e.target.value = v;
+                });
+            }
+
+            // --- Nova Máscara Dinâmica de Telefone ---
+            if (telInput) {
+                telInput.addEventListener('input', function (e) {
+                    let raw = e.target.value;
+                    // Mantém apenas o '+' e os números
+                    let v = raw.replace(/[^\d+]/g, ''); 
+                    
+                    if (v.length === 0) {
+                        e.target.value = '';
+                        return;
+                    }
+
+                    // Força que a string inicie com '+'
+                    if (v[0] !== '+') {
+                        v = '+' + v.replace(/\+/g, '');
+                    } else {
+                        // Remove '+' que a pessoa possa ter digitado no meio
+                        v = '+' + v.substring(1).replace(/\+/g, '');
+                    }
+
+                    // Regra: Se for +55, aplica a máscara Brasileira
+                    if (v.startsWith('+55')) {
+                        let numerosBr = v.substring(3); // Pega apenas os números após o DDI
+                        if (numerosBr.length > 11) numerosBr = numerosBr.substring(0, 11); // Limita a 11 dígitos BR
+                        
+                        let masked = '+55';
+                        if (numerosBr.length > 0) {
+                            masked += ' ' + numerosBr.substring(0, 2); // Adiciona DDD
+                        }
+                        if (numerosBr.length > 2) {
+                            // Mágica da transição Fixo (10) vs Celular (11)
+                            if (numerosBr.length <= 10) {
+                                masked += ' ' + numerosBr.substring(2, 6);
+                                if (numerosBr.length > 6) {
+                                    masked += '-' + numerosBr.substring(6, 10);
+                                }
+                            } else {
+                                masked += ' ' + numerosBr.substring(2, 7);
+                                masked += '-' + numerosBr.substring(7, 11);
+                            }
+                        }
+                        e.target.value = masked;
+                    } 
+                    // Regra: Se for qualquer outro DDI Internacional, máscara livre
+                    else {
+                        if (v.length > 16) v = v.substring(0, 16); // Limite de bom senso internacional
+                        e.target.value = v; 
+                    }
+                });
+
+                // Se houver um telefone salvo no banco de dados, simula um "input" para formatar ele na tela
+                if(telInput.value) {
+                    telInput.dispatchEvent(new Event('input'));
+                }
+            }
+
+            // --- Validações de Envio ao Salvar ---
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    
+                    // 1. Validação da Data de Nascimento (Impede anos absurdos)
+                    if (dataInput && dataInput.value) {
+                        let anoDigitado = parseInt(dataInput.value.split('-')[0]); 
+                        let anoAtual = new Date().getFullYear();
+
+                        if (anoDigitado < 1900 || anoDigitado > anoAtual) {
+                            e.preventDefault(); 
+                            alert(`Erro: O ano de nascimento (${anoDigitado}) é inválido. Insira um ano entre 1900 e ${anoAtual}.`);
+                            dataInput.focus();
+                            return; 
+                        }
+                    }
+
+                    // 2. Validação do CPF: Se digitou algo, DEVE ter 11 números
+                    if (cpfInput && cpfInput.value) {
+                        let cpfNumeros = cpfInput.value.replace(/\D/g, '');
+                        if (cpfNumeros.length !== 11) {
+                            e.preventDefault(); 
+                            alert('Erro: O CPF precisa ter exatamente 11 dígitos.');
+                            cpfInput.focus();
+                            return; 
+                        }
+                    }
+
+                    // 3. Nova Validação Flexível do Telefone
+                    if (telInput && telInput.value) {
+                        let textVal = telInput.value;
+                        let telNumeros = textVal.replace(/\D/g, '');
+                        
+                        // Se for Brasil
+                        if (textVal.startsWith('+55')) {
+                            if (telNumeros.length < 12 || telNumeros.length > 13) {
+                                e.preventDefault();
+                                alert('Erro: Para números do Brasil (+55), insira o DDD e o número correto (10 ou 11 dígitos).');
+                                telInput.focus();
+                                return;
+                            }
+                        } 
+                        // Se for Internacional
+                        else {
+                            if (telNumeros.length < 8) {
+                                e.preventDefault();
+                                alert('Erro: O telefone internacional parece muito curto. Verifique o DDI (ex: +1) e o número.');
+                                telInput.focus();
+                                return;
+                            }
+                        }
+                    }
+
+                    // 4. Limpeza final para salvar no Banco de Dados de forma padronizada
+                    if (cpfInput && cpfInput.value) {
+                        cpfInput.value = cpfInput.value.replace(/\D/g, '');
+                    }
+                    if (telInput && telInput.value) {
+                        // Mantém apenas números e o sinal de '+' no começo
+                        telInput.value = telInput.value.replace(/[^\d+]/g, '');
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
