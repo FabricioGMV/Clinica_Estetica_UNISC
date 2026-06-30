@@ -3,6 +3,9 @@ from app.models.models import init_db
 
 app = create_app()
 
+# ADICIONE A CHAVE SECRETA AQUI:
+app.secret_key = 'chave123'
+
 if __name__ == '__main__':
     init_db()
     

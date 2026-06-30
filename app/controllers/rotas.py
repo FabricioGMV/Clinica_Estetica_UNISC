@@ -87,32 +87,36 @@ def detalhes_paciente(id):
     paciente = paciente_service.obter_paciente(id)
     
     if request.method == 'POST':
-        # Aqui enviamos tanto os dados textuais quanto os arquivos (foto)
-        # Se o seu paciente_service.atualizar_pacientes não aceitar arquivos ainda, 
-        # você pode tratar o upload da foto diretamente aqui ou passar request.files
-        paciente_service.atualizar_pacientes(id, request.form)
-        
-        # Exemplo de tratamento de foto direto na rota se preferir simplificar:
-        if 'foto_perfil' in request.files:
-            file = request.files['foto_perfil']
-            if file and file.filename != '':
-                # Supondo que você salve na pasta correspondente
-                filename = f"paciente_{id}.jpg"
-                import os
-                # Define o caminho para a pasta static do projeto
-                basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-                upload_path = os.path.join(basedir, 'app', 'static', 'uploads', 'perfis')
-                os.makedirs(upload_path, exist_ok=True)
-                file.save(os.path.join(upload_path, filename))
-                
-                # Salva o caminho/nome da foto no banco de dados se tiver a coluna
-                conn = get_db_connection()
-                conn.execute('UPDATE pacientes SET email = ? WHERE id = ?', (paciente['email'], id)) # Ajuste conforme seu banco
-                conn.close()
-        
-        flash('Dados do paciente atualizados com sucesso!', 'success')
-        return redirect(url_for('rotas.detalhes_paciente', id=id))
-        
+        try:
+            # 1. Atualiza todos os dados textuais e checkboxes com segurança
+            paciente_service.atualizar_pacientes(id, request.form)
+            
+            # 2. Se o usuário enviou uma nova foto de perfil, salva ela no servidor
+            if 'foto_perfil' in request.files:
+                file = request.files['foto_perfil']
+                if file and file.filename != '':
+                    filename = f"paciente_{id}.jpg"
+                    import os
+                    basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+                    upload_path = os.path.join(basedir, 'app', 'static', 'uploads', 'perfis')
+                    os.makedirs(upload_path, exist_ok=True)
+                    file.save(os.path.join(upload_path, filename))
+            
+            flash('Dados do paciente atualizados com sucesso!', 'success')
+            return redirect(url_for('rotas.detalhes_paciente', id=id))
+            
+        except Exception as e:
+            # === AQUI ESTÁ O TRATAMENTO DE ERRO ===
+            # Isso vai imprimir o erro exato no terminal do seu VS Code / PyCharm
+            print("\n" + "="*50)
+            print("🚨 ERRO AO ATUALIZAR PACIENTE 🚨")
+            print(f"Detalhes do erro: {e}")
+            print("="*50 + "\n")
+            
+            # Isso vai mostrar uma mensagem de erro vermelha na tela do navegador
+            flash(f'Erro ao salvar: {str(e)}', 'danger')
+            return redirect(url_for('rotas.detalhes_paciente', id=id))
+            
     return render_template('detalhes_paciente.html', paciente=paciente)
 
 #6. Rota para agendar nova consulta
