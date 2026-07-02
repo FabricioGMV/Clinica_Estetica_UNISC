@@ -1,238 +1,522 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ 'Editar' if agendamento else 'Novo' }} Agendamento - Estética UNISC</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root {
+            --primary-white: #ffffff;
+            --primary-black: #000000;
+            --primary-purple: #CF98FF;
+            --text-color: #333333;
+            --bg-color: #f4f7f6;
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            --transition: all 0.3s ease;
+        }
 
-{% block title %}{{ 'Editar' if agendamento else 'Novo' }} Agendamento{% endblock %}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
 
-{% block content %}
-{% set is_pago = (agendamento and agendamento.status_pagamento == 'Pago') %}
-{% set has_sessoes = (qtd_sessoes is defined and qtd_sessoes > 0) %}
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
 
-<div class="row justify-content-center">
-    <div class="col-lg-10">
-        <div class="card shadow-sm border-success">
-            <div class="card-header bg-success text-white">
-                <h4 class="mb-0">{{ 'Editar Agendamento' if agendamento else 'Agendar Consulta' }}: {{ paciente.nome_completo }}</h4>
-            </div>
-            <div class="card-body">
-                
-                {% if has_sessoes %}
-                <div class="alert alert-warning py-2 small">
-                    <i class="bi bi-info-circle-fill"></i> Como este procedimento já possui sessões em andamento, apenas o <strong>Status</strong> e as <strong>Observações</strong> podem ser alterados.
-                </div>
-                {% elif is_pago %}
-                <div class="alert alert-info py-2 small">
-                    <i class="bi bi-info-circle-fill"></i> Como o pagamento já foi confirmado, os valores e forma de pagamento não podem ser alterados.
-                </div>
-                {% endif %}
+        /* --- Estilos do Menu Lateral (Sidebar) --- */
+        .sidebar {
+            width: 280px;
+            background-color: var(--primary-black);
+            color: var(--primary-white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px;
+            transition: var(--transition);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            flex-shrink: 0;
+            z-index: 1000;
+            white-space: nowrap; /* <-- Esta linha evita que os ícones amassem */
+        }
 
-                <form method="POST" id="formEdicaoAgendamento" 
-                      data-is-edicao="{{ 'true' if agendamento else 'false' }}" 
-                      data-original-bd="{{ agendamento.data_hora if agendamento else '' }}">
-                      
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Data e Hora</label>
-                            <input type="datetime-local" id="data_hora" name="data_hora" class="form-control bg-light" value="{{ agendamento.data_hora if agendamento else '' }}" required {{ 'readonly' if has_sessoes else '' }}>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Status</label>
-                            <select name="status" class="form-select" id="status_select">
-                                <option value="Aguardando" {% if agendamento and agendamento.status == 'Aguardando' %}selected{% endif %}>Aguardando</option>
-                                <option value="Confirmado" {% if agendamento and agendamento.status == 'Confirmado' %}selected{% endif %}>Confirmado</option>
-                                <option value="Cancelado" {% if agendamento and agendamento.status == 'Cancelado' %}selected{% endif %}>Cancelado</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Procedimento</label>
-                            <select name="tipo_procedimento" class="form-select bg-light" required {{ 'disabled' if has_sessoes else '' }}>
-                                <option value="Limpeza de Pele" {% if agendamento and agendamento.tipo_procedimento == 'Limpeza de Pele' %}selected{% endif %}>Limpeza de Pele</option>
-                                <option value="Botox" {% if agendamento and agendamento.tipo_procedimento == 'Botox' %}selected{% endif %}>Botox</option>
-                                <option value="Peeling" {% if agendamento and agendamento.tipo_procedimento == 'Peeling' %}selected{% endif %}>Peeling</option>
-                                <option value="Drenagem Linfatica" {% if agendamento and agendamento.tipo_procedimento == 'Drenagem Linfatica' %}selected{% endif %}>Drenagem Linfática</option>
-                                <option value="Outro" {% if agendamento and agendamento.tipo_procedimento == 'Outro' %}selected{% endif %}>Outro...</option>
-                            </select>
-                        </div>
-                    </div>
+        /* Classe para o menu recolhido */
+        .sidebar.collapsed {
+            width: 85px; /* Ajustado para 85px para ficar idêntico ao pacientes.html */
+            padding: 25px 15px;
+            align-items: center;
+        }
 
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Sessões Previstas</label>
-                            <input type="number" name="sessoes_previstas" class="form-control bg-light" value="{{ agendamento.sessoes_previstas if agendamento else '1' }}" min="1" required {{ 'readonly' if has_sessoes else '' }}>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Valor Total (R$)</label>
-                            <input type="text" id="valor_cobrado" name="valor_cobrado" class="form-control bg-light" value="{{ agendamento.valor_cobrado if agendamento else '' }}" placeholder="0,00" required {{ 'readonly' if is_pago or has_sessoes else '' }}>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Forma de Pagamento</label>
-                            <select name="forma_pagamento" class="form-select bg-light" {{ 'disabled' if is_pago or has_sessoes else '' }}>
-                                <option value="Pix" {% if agendamento and agendamento.forma_pagamento == 'Pix' %}selected{% endif %}>Pix</option>
-                                <option value="Cartão de Crédito" {% if agendamento and agendamento.forma_pagamento == 'Cartão de Crédito' %}selected{% endif %}>Cartão de Crédito</option>
-                                <option value="Cartão de Débito" {% if agendamento and agendamento.forma_pagamento == 'Cartão de Débito' %}selected{% endif %}>Cartão de Débito</option>
-                                <option value="Dinheiro" {% if agendamento and agendamento.forma_pagamento == 'Dinheiro' %}selected{% endif %}>Dinheiro</option>
-                            </select>
-                        </div>
-                    </div>
+        .sidebar.collapsed .logo-area span,
+        .sidebar.collapsed .sidebar-menu-link span,
+        .sidebar.collapsed .sidebar-footer span {
+            display: none;
+        }
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Observações do Agendamento</label>
-                        <textarea name="observacoes" class="form-control" rows="2">{{ agendamento.observacoes if agendamento else '' }}</textarea>
-                    </div>
+        .sidebar.collapsed .sidebar-header {
+            align-items: center;
+        }
 
-                    <div class="d-flex justify-content-end gap-2">
-                        <a href="/paciente/{{ paciente.id }}" class="btn btn-secondary">Cancelar</a>
-                        <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> Salvar Alterações</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+        .sidebar.collapsed .sidebar-menu-link {
+            justify-content: center;
+            padding: 14px 0;
+        }
 
-<div class="modal fade" id="modalConfirmarCancelamento" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-danger">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Atenção!</h5>
-                <button type="button" class="btn-close btn-close-white" onclick="reverterSelecao()" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="textoModalCancelamento">
-                </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="reverterSelecao()">Desistir</button>
-                <button type="button" class="btn btn-danger" onclick="confirmarCancelamentoModal()">Confirmar Cancelamento</button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 40px;
+            width: 100%;
+        }
 
-{% block scripts %}
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const formAgendamento = document.getElementById('formEdicaoAgendamento');
-        const selectStatus = document.getElementById('status_select');
-        const inputDataHora = document.getElementById('data_hora');
-        const inputValor = document.getElementById('valor_cobrado');
-        const qtdSessoes = Number("{{ qtd_sessoes | default(0) }}");
+        .sidebar-toggle {
+            font-size: 1.6rem;
+            color: var(--primary-white);
+            cursor: pointer;
+            transition: var(--transition);
+            padding: 5px;
+        }
+
+        .sidebar-toggle:hover {
+            box-shadow: 0 0 12px rgba(207, 152, 255, 0.4); /* Sombra roxa no hover */
+            border-radius: 5px;
+            color: var(--primary-purple);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--primary-purple);
+            margin-top: 15px;
+            white-space: nowrap;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            flex-grow: 1;
+            width: 100%;
+        }
+
+        .sidebar-menu-item {
+            margin-bottom: 12px;
+        }
+
+        .sidebar-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 14px 18px;
+            text-decoration: none;
+            color: var(--primary-white);
+            border-radius: 10px;
+            transition: var(--transition);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .sidebar-menu-link:hover,
+        .sidebar-menu-link.active {
+            background-color: var(--primary-purple);
+            color: var(--primary-black);
+        }
+
+        .sidebar-menu-link i {
+            font-size: 1.3rem;
+            color: var(--primary-purple);
+            min-width: 24px;
+            text-align: center;
+        }
+        .sidebar-menu-link:hover i,
+        .sidebar-menu-link.active i {
+            color: var(--primary-black);
+        }
+
+        .sidebar-footer {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 18px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .sidebar-footer i {
+            color: var(--primary-purple);
+            font-size: 1.6rem;
+        }
+
+        /* --- Estilos da Área de Conteúdo Principal --- */
+        .content-area {
+            flex-grow: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            transition: var(--transition);
+            width: 100%;
+        }
+
+        /* --- Customizações do Formulário (Cores: Preto, Branco e #CF98FF) --- */
+        .card-custom {
+            border: none;
+            box-shadow: var(--card-shadow);
+            border-radius: 15px;
+            overflow: hidden;
+        }
         
-        // Resgate seguro dos atributos HTML para o JS sem alarmar o linter do editor
-        const isEdicao = formAgendamento.dataset.isEdicao === 'true';
-        const dataOriginalBD = formAgendamento.dataset.originalBd;
-
-        // ---- Formatação Dinâmica de Moeda Brasileira ----
-        function formatarMoeda(valor) {
-            valor = valor.replace(/\D/g, ""); // Remove tudo que não for número
-            if (valor === "") return "";
-            valor = (parseInt(valor, 10) / 100).toFixed(2) + "";
-            valor = valor.replace(".", ","); // Troca ponto decimal por vírgula
-            valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1."); // Adiciona pontos de milhar
-            return valor;
+        .card-header-custom {
+            background-color: var(--primary-black);
+            color: var(--primary-purple);
+            padding: 20px 25px;
+            border-bottom: 3px solid var(--primary-purple);
         }
 
-        // Aplica a máscara se o BD enviar valor na edição
-        if (inputValor && inputValor.value && !inputValor.value.includes(",")) {
-            let valorFloat = parseFloat(inputValor.value);
-            if (!isNaN(valorFloat)) {
-                if (valorFloat > 3000) valorFloat = 3000; // Bloqueio preventivo na carga de dados
-                let valorString = valorFloat.toFixed(2).replace('.', '');
-                inputValor.value = formatarMoeda(valorString);
-            }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-purple);
+            box-shadow: 0 0 0 0.25rem rgba(207, 152, 255, 0.25);
         }
 
-        // Monitora digitação e limita o valor máximo em R$ 3.000,00
-        if (inputValor) {
-            inputValor.addEventListener("input", function(e) {
-                let apenasNumeros = e.target.value.replace(/\D/g, "");
-                
-                if (apenasNumeros !== "") {
-                    let valorFloat = parseInt(apenasNumeros, 10) / 100;
-                    // Se passar de 3000, fixa o valor máximo correspondente a R$ 3.000,00
-                    if (valorFloat > 3000) {
-                        apenasNumeros = "300000"; 
-                    }
-                }
-                
-                e.target.value = formatarMoeda(apenasNumeros);
-            });
+        .btn-purple {
+            background-color: var(--primary-purple);
+            color: var(--primary-black);
+            font-weight: bold;
+            border: none;
+            transition: var(--transition);
         }
 
-        // ---- Lógica do Modal de Cancelamento ----
-        const statusOriginal = (selectStatus.value && selectStatus.value !== 'Cancelado') ? selectStatus.value : 'Confirmado';
-        let cancelamentoConfirmado = false;
+        .btn-purple:hover {
+            background-color: #b87eea;
+            color: var(--primary-black);
+            transform: translateY(-2px);
+        }
 
-        const modalEl = document.getElementById('modalConfirmarCancelamento');
-        const modalConfirmacao = bootstrap.Modal.getOrCreateInstance(modalEl, {
-            backdrop: 'static',
-            keyboard: false
-        });
+        .btn-dark-custom {
+            background-color: var(--primary-black);
+            color: var(--primary-white);
+            border: none;
+            transition: var(--transition);
+        }
 
-        // ---- Validações no Submit ----
-        formAgendamento.addEventListener('submit', function(event) {
+        .btn-dark-custom:hover {
+            background-color: #333333;
+            color: var(--primary-white);
+        }
+
+        .alert-purple {
+            background-color: rgba(207, 152, 255, 0.15);
+            border-left: 4px solid var(--primary-purple);
+            color: var(--primary-black);
+        }
+        
+        .alert-purple i {
+            color: var(--primary-purple);
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-list sidebar-toggle" id="sidebarToggle"></i>
+            <div class="logo-area">
+                <span>Clínica Estética e Spa UNISC</span>
+            </div>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-menu-item">
+                <a href="/" class="sidebar-menu-link">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span>Visão Geral</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/pacientes" class="sidebar-menu-link active">
+                    <i class="bi bi-people"></i>
+                    <span>Pacientes</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/financeiro" class="sidebar-menu-link">
+                    <i class="bi bi-cash-stack"></i>
+                    <span>Financeiro</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/estatisticas" class="sidebar-menu-link">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Estatísticas</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/relatorios" class="sidebar-menu-link">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Relatórios</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <i class="bi bi-person-circle"></i>
+            <span>Admin User</span>
+        </div>
+    </nav>
+
+    <main class="content-area">
+        
+        {% set is_pago = (agendamento and agendamento.status_pagamento == 'Pago') %}
+        {% set has_sessoes = (qtd_sessoes is defined and qtd_sessoes > 0) %}
+
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card card-custom">
+                    <div class="card-header card-header-custom">
+                        <h4 class="mb-0 fw-bold">{{ 'Editar Agendamento' if agendamento else 'Agendar Consulta' }}: <span class="text-white">{{ paciente.nome_completo }}</span></h4>
+                    </div>
+                    <div class="card-body p-4">
+                        
+                        {% if has_sessoes %}
+                        <div class="alert alert-purple py-3 small rounded-3">
+                            <i class="bi bi-info-circle-fill me-2"></i> Como este procedimento já possui sessões em andamento, apenas o <strong>Status</strong> e as <strong>Observações</strong> podem ser alterados.
+                        </div>
+                        {% elif is_pago %}
+                        <div class="alert alert-secondary border-start border-4 border-secondary py-3 small rounded-3">
+                            <i class="bi bi-shield-lock-fill me-2 text-secondary"></i> Como o pagamento já foi confirmado, os valores e forma de pagamento não podem ser alterados.
+                        </div>
+                        {% endif %}
+
+                        <form method="POST" id="formEdicaoAgendamento" 
+                              data-is-edicao="{{ 'true' if agendamento else 'false' }}" 
+                              data-original-bd="{{ agendamento.data_hora if agendamento else '' }}">
+                              
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-muted">Data e Hora</label>
+                                    <input type="datetime-local" id="data_hora" name="data_hora" class="form-control" value="{{ agendamento.data_hora if agendamento else '' }}" required {{ 'readonly' if has_sessoes else '' }}>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-muted">Status</label>
+                                    <select name="status" class="form-select" id="status_select">
+                                        <option value="Aguardando" {% if agendamento and agendamento.status == 'Aguardando' %}selected{% endif %}>Aguardando</option>
+                                        <option value="Confirmado" {% if agendamento and agendamento.status == 'Confirmado' %}selected{% endif %}>Confirmado</option>
+                                        <option value="Cancelado" {% if agendamento and agendamento.status == 'Cancelado' %}selected{% endif %}>Cancelado</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-muted">Procedimento</label>
+                                    <select name="tipo_procedimento" class="form-select" required {{ 'disabled' if has_sessoes else '' }}>
+                                        <option value="Limpeza de Pele" {% if agendamento and agendamento.tipo_procedimento == 'Limpeza de Pele' %}selected{% endif %}>Limpeza de Pele</option>
+                                        <option value="Botox" {% if agendamento and agendamento.tipo_procedimento == 'Botox' %}selected{% endif %}>Botox</option>
+                                        <option value="Peeling" {% if agendamento and agendamento.tipo_procedimento == 'Peeling' %}selected{% endif %}>Peeling</option>
+                                        <option value="Drenagem Linfatica" {% if agendamento and agendamento.tipo_procedimento == 'Drenagem Linfatica' %}selected{% endif %}>Drenagem Linfática</option>
+                                        <option value="Outro" {% if agendamento and agendamento.tipo_procedimento == 'Outro' %}selected{% endif %}>Outro...</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-muted">Sessões Previstas</label>
+                                    <input type="number" name="sessoes_previstas" class="form-control" value="{{ agendamento.sessoes_previstas if agendamento else '1' }}" min="1" required {{ 'readonly' if has_sessoes else '' }}>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-muted">Valor Total (R$)</label>
+                                    <input type="text" id="valor_cobrado" name="valor_cobrado" class="form-control" value="{{ agendamento.valor_cobrado if agendamento else '' }}" placeholder="0,00" required {{ 'readonly' if is_pago or has_sessoes else '' }}>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-muted">Forma de Pagamento</label>
+                                    <select name="forma_pagamento" class="form-select" {{ 'disabled' if is_pago or has_sessoes else '' }}>
+                                        <option value="Pix" {% if agendamento and agendamento.forma_pagamento == 'Pix' %}selected{% endif %}>Pix</option>
+                                        <option value="Cartão de Crédito" {% if agendamento and agendamento.forma_pagamento == 'Cartão de Crédito' %}selected{% endif %}>Cartão de Crédito</option>
+                                        <option value="Cartão de Débito" {% if agendamento and agendamento.forma_pagamento == 'Cartão de Débito' %}selected{% endif %}>Cartão de Débito</option>
+                                        <option value="Dinheiro" {% if agendamento and agendamento.forma_pagamento == 'Dinheiro' %}selected{% endif %}>Dinheiro</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold text-muted">Observações do Agendamento</label>
+                                <textarea name="observacoes" class="form-control" rows="3">{{ agendamento.observacoes if agendamento else '' }}</textarea>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-3 mt-4 pt-3 border-top">
+                                <a href="/paciente/{{ paciente.id }}" class="btn btn-dark-custom px-4 py-2">Cancelar</a>
+                                <button type="submit" class="btn btn-purple px-4 py-2">
+                                    <i class="bi bi-save me-1"></i> Salvar Alterações
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalConfirmarCancelamento" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-danger text-white border-0">
+                        <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Atenção!</h5>
+                        <button type="button" class="btn-close btn-close-white" onclick="reverterSelecao()" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4 fs-6" id="textoModalCancelamento">
+                        </div>
+                    <div class="modal-footer border-0 bg-light">
+                        <button type="button" class="btn btn-secondary" onclick="reverterSelecao()">Desistir</button>
+                        <button type="button" class="btn btn-danger px-4" onclick="confirmarCancelamentoModal()">Confirmar Cancelamento</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
             
-            // 1. Trava de Data (Passado e Limite Futuro de 1 Ano)
-            if (inputDataHora && inputDataHora.value) {
-                let dataDigitada = new Date(inputDataHora.value);
-                let dataAtual = new Date();
-                
-                let dataLimite = new Date();
-                dataLimite.setFullYear(dataAtual.getFullYear() + 1);
+            // ---- Lógica para Recolher/Expandir o Menu Lateral ----
+            const sidebarToggleBtn = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            sidebarToggleBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('collapsed');
+            });
 
-                if (dataDigitada > dataLimite) {
-                    event.preventDefault(); 
-                    alert("Erro: Não é possível realizar um agendamento com mais de 1 ano de antecedência.");
-                    inputDataHora.focus();
-                    return;
+            // ---- Lógica de Negócio Original do Formulário (Intocada) ----
+            const formAgendamento = document.getElementById('formEdicaoAgendamento');
+            const selectStatus = document.getElementById('status_select');
+            const inputDataHora = document.getElementById('data_hora');
+            const inputValor = document.getElementById('valor_cobrado');
+            const qtdSessoes = Number("{{ qtd_sessoes | default(0) }}");
+            
+            const isEdicao = formAgendamento.dataset.isEdicao === 'true';
+            const dataOriginalBD = formAgendamento.dataset.originalBd;
+
+            function formatarMoeda(valor) {
+                valor = valor.replace(/\D/g, ""); 
+                if (valor === "") return "";
+                valor = (parseInt(valor, 10) / 100).toFixed(2) + "";
+                valor = valor.replace(".", ","); 
+                valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1."); 
+                return valor;
+            }
+
+            if (inputValor && inputValor.value && !inputValor.value.includes(",")) {
+                let valorFloat = parseFloat(inputValor.value);
+                if (!isNaN(valorFloat)) {
+                    if (valorFloat > 3000) valorFloat = 3000; 
+                    let valorString = valorFloat.toFixed(2).replace('.', '');
+                    inputValor.value = formatarMoeda(valorString);
                 }
+            }
 
-                if (!isEdicao || (isEdicao && inputDataHora.value !== dataOriginalBD)) {
-                    let dataMinima = new Date();
-                    dataMinima.setMinutes(dataMinima.getMinutes() - 30); // 30 minutos de tolerância
+            if (inputValor) {
+                inputValor.addEventListener("input", function(e) {
+                    let apenasNumeros = e.target.value.replace(/\D/g, "");
+                    
+                    if (apenasNumeros !== "") {
+                        let valorFloat = parseInt(apenasNumeros, 10) / 100;
+                        if (valorFloat > 3000) {
+                            apenasNumeros = "300000"; 
+                        }
+                    }
+                    
+                    e.target.value = formatarMoeda(apenasNumeros);
+                });
+            }
 
-                    if (dataDigitada < dataMinima) {
+            const statusOriginal = (selectStatus.value && selectStatus.value !== 'Cancelado') ? selectStatus.value : 'Confirmado';
+            let cancelamentoConfirmado = false;
+
+            const modalEl = document.getElementById('modalConfirmarCancelamento');
+            const modalConfirmacao = bootstrap.Modal.getOrCreateInstance(modalEl, {
+                backdrop: 'static',
+                keyboard: false
+            });
+
+            formAgendamento.addEventListener('submit', function(event) {
+                
+                if (inputDataHora && inputDataHora.value) {
+                    let dataDigitada = new Date(inputDataHora.value);
+                    let dataAtual = new Date();
+                    
+                    let dataLimite = new Date();
+                    dataLimite.setFullYear(dataAtual.getFullYear() + 1);
+
+                    if (dataDigitada > dataLimite) {
                         event.preventDefault(); 
-                        alert("Erro: A data e hora do agendamento não podem estar no passado.");
+                        alert("Erro: Não é possível realizar um agendamento com mais de 1 ano de antecedência.");
                         inputDataHora.focus();
                         return;
                     }
-                }
-            }
 
-            // 2. Acionamento do Modal de Cancelamento
-            if (selectStatus.value === 'Cancelado' && !cancelamentoConfirmado) {
-                event.preventDefault(); 
+                    if (!isEdicao || (isEdicao && inputDataHora.value !== dataOriginalBD)) {
+                        let dataMinima = new Date();
+                        dataMinima.setMinutes(dataMinima.getMinutes() - 30); 
 
-                let textoModal = '';
-                if (qtdSessoes > 0) {
-                    textoModal = "Há uma ou mais sessões realizada(s). Caso confirmado, o procedimento será finalizado automaticamente e não será mais possível alterar o status e nem realizar mais sessões.";
-                } else {
-                    textoModal = "Tem certeza que deseja cancelar este agendamento? Uma vez cancelado não será mais possível alterar o status e nem realizar o procedimento.";
+                        if (dataDigitada < dataMinima) {
+                            event.preventDefault(); 
+                            alert("Erro: A data e hora do agendamento não podem estar no passado.");
+                            inputDataHora.focus();
+                            return;
+                        }
+                    }
                 }
-                
-                document.getElementById('textoModalCancelamento').innerText = textoModal;
-                modalConfirmacao.show();
-                return;
-            }
 
-            // 3. Limpeza do formato R$ para envio ao DB (Garante envio limpo)
-            if (inputValor && inputValor.value) {
-                let limpo = inputValor.value.replace(/\./g, "").replace(",", ".");
-                if (parseFloat(limpo) > 3000) {
-                    limpo = "3000.00";
+                if (selectStatus.value === 'Cancelado' && !cancelamentoConfirmado) {
+                    event.preventDefault(); 
+
+                    let textoModal = '';
+                    if (qtdSessoes > 0) {
+                        textoModal = "Há uma ou mais sessões realizada(s). Caso confirmado, o procedimento será finalizado automaticamente e não será mais possível alterar o status e nem realizar mais sessões.";
+                    } else {
+                        textoModal = "Tem certeza que deseja cancelar este agendamento? Uma vez cancelado não será mais possível alterar o status e nem realizar o procedimento.";
+                    }
+                    
+                    document.getElementById('textoModalCancelamento').innerText = textoModal;
+                    modalConfirmacao.show();
+                    return;
                 }
-                inputValor.value = limpo;
-            }
+
+                if (inputValor && inputValor.value) {
+                    let limpo = inputValor.value.replace(/\./g, "").replace(",", ".");
+                    if (parseFloat(limpo) > 3000) {
+                        limpo = "3000.00";
+                    }
+                    inputValor.value = limpo;
+                }
+            });
+
+            window.reverterSelecao = function() {
+                modalConfirmacao.hide();
+                selectStatus.value = statusOriginal;
+            };
+
+            window.confirmarCancelamentoModal = function() {
+                cancelamentoConfirmado = true;
+                modalConfirmacao.hide();
+                setTimeout(() => { formAgendamento.submit(); }, 150);
+            };
         });
-
-        window.reverterSelecao = function() {
-            modalConfirmacao.hide();
-            selectStatus.value = statusOriginal;
-        };
-
-        window.confirmarCancelamentoModal = function() {
-            cancelamentoConfirmado = true;
-            modalConfirmacao.hide();
-            setTimeout(() => { formAgendamento.submit(); }, 150);
-        };
-    });
-</script>
-{% endblock %}
+    </script>
+</body>
+</html>

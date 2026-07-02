@@ -1,173 +1,553 @@
-{% extends 'base.html' %}
-
-{% block title %}Relatórios de Desempenho{% endblock %}
-
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0"><i class="bi bi-file-earmark-bar-graph-fill text-dark"></i> Relatório de Vendas e BI</h2>
-    <div class="d-flex gap-2">
-        <button onclick="exportarExcel()" class="btn btn-success">
-            <i class="bi bi-file-earmark-excel"></i> Exportar Dados (.xlsx)
-        </button>
-    </div>
-</div>
-
-<div class="p-3 bg-white rounded shadow-sm border">
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatórios de Desempenho - Estética UNISC</title>
     
-    <div class="text-center mb-4 mt-2">
-        <h3 class="fw-bold">Relatório de Fechamento - Estética UNISC</h3>
-        <hr>
-    </div>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card shadow-sm border h-100 bg-dark text-white">
-                <div class="card-body">
-                    <h5 class="card-title text-uppercase text-white-50 mb-4"><i class="bi bi-robot"></i> Análise de Crescimento</h5>
-                    
-                    <h1 class="display-5 fw-bold mb-3">R$ {{ "{:,.2f}".format(receita_atual).replace(',', 'X').replace('.', ',').replace('X', '.') }} <span class="fs-4 text-white-50">este mês</span></h1>
-                    
-                    {% if crescimento > 0 %}
-                        <div class="alert bg-success text-white border-0 py-2">
-                            <i class="bi bi-arrow-up-circle-fill fs-5"></i> <strong>Conclusão:</strong> Crescimento de <strong>{{ crescimento }}%</strong> em relação ao mês anterior (R$ {{ "{:,.2f}".format(receita_passado).replace(',', 'X').replace('.', ',').replace('X', '.') }}).
-                        </div>
-                    {% elif crescimento < 0 %}
-                        <div class="alert bg-danger text-white border-0 py-2">
-                            <i class="bi bi-arrow-down-circle-fill fs-5"></i> <strong>Atenção:</strong> Queda de <strong>{{ crescimento|abs }}%</strong> no faturamento em comparação ao mês passado.
-                        </div>
-                    {% else %}
-                        <div class="alert bg-secondary text-white border-0 py-2">
-                            <i class="bi bi-dash-circle-fill fs-5"></i> <strong>Estabilidade:</strong> Receita igual ou sem dados anteriores.
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card shadow-sm border h-100">
-                <div class="card-header bg-white border-bottom-0 pt-3">
-                    <h6 class="mb-0 text-muted"><i class="bi bi-trophy-fill text-warning"></i> Top 5: Procedimentos Mais Rentáveis</h6>
-                </div>
-                <div class="card-body p-0">
-                    <ul class="list-group list-group-flush">
-                        {% for proc in top_procedimentos %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-bottom">
-                            <div>
-                                <span class="fw-bold">{{ proc.tipo_procedimento }}</span><br>
-                                <small class="text-muted">{{ proc.qtd_vendas }} venda(s) realizada(s)</small>
-                            </div>
-                            <span class="badge bg-success rounded-pill fs-6">
-                                R$ {{ "{:,.2f}".format(proc.total_receita).replace(',', 'X').replace('.', ',').replace('X', '.') }}
-                            </span>
-                        </li>
-                        {% else %}
-                        <li class="list-group-item text-center text-muted py-4">Nenhum dado consolidado.</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow-sm border">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0 text-muted"><i class="bi bi-graph-up"></i> Histórico de Receita Bruta (Últimos 6 Meses)</h6>
-                </div>
-                <div class="card-body" style="position: relative; height:250px; width:100%">
-                    <canvas id="graficoVendas"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card shadow-sm border mt-4">
-        <div class="card-header bg-light text-dark border-bottom pt-4 pb-3">
-            <h5 class="mb-0"><i class="bi bi-table"></i> Banco de Dados Consolidado</h5>
-        </div>
-        <div class="card-body p-0">
-            <table class="table table-striped mb-0 text-center align-middle" id="tabelaRelatorio">
-                <thead class="table-dark">
-                    <tr>
-                        <th class="text-start py-3">Data</th>
-                        <th class="text-start py-3">Nome do Paciente</th>
-                        <th class="text-start py-3">Procedimento</th>
-                        <th class="py-3">Sessões</th>
-                        <th class="py-3">Valor (R$)</th>
-                        <th class="py-3">Pgto</th>
-                        <th class="py-3">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for linha in lista_relatorio %}
-                    <tr>
-                        <td class="text-start">
-                            {% if linha.data_hora and linha.data_hora|length >= 10 %}
-                                {{ linha.data_hora[8:10] }}/{{ linha.data_hora[5:7] }}/{{ linha.data_hora[0:4] }}
-                            {% else %}
-                                {{ linha.data_hora }}
-                            {% endif %}
-                        </td>
-                        <td class="text-start">{{ linha.nome_completo }}</td>
-                        <td class="text-start">{{ linha.tipo_procedimento }}</td>
-                        <td>{{ linha.sessoes_previstas }}</td>
-                        <td class="fw-bold text-success">
-                            {{ "{:,.2f}".format(linha.valor_cobrado | float).replace(',', 'X').replace('.', ',').replace('X', '.') }}
-                        </td>
-                        <td>{{ linha.status_pagamento }}</td>
-                        <td>{{ linha.status }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    // --- GRÁFICO: LINHA ---
-    const ctxVendas = document.getElementById('graficoVendas').getContext('2d');
-    
-    new Chart(ctxVendas, {
-        type: 'line',
-        data: {
-            labels: {{ meses_labels | tojson }},
-            datasets: [{
-                label: 'Faturamento PAGO (R$)',
-                data: {{ receita_dados | tojson }},
-                borderColor: '#198754',
-                backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                borderWidth: 3,
-                fill: true,
-                pointBackgroundColor: '#198754',
-                pointRadius: 5,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true, 
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true } },
-            plugins: { legend: { display: false } }
-            // Animação reativada ao remover o "animation: false"
+    <style>
+        :root {
+            --primary-white: #ffffff;
+            --primary-black: #000000;
+            --primary-purple: #CF98FF;
+            --primary-purple-hover: #b875f8;
+            --text-color: #333333;
+            --bg-color: #f4f7f6;
+            --card-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
-    });
-});
 
-// GERAÇÃO DO EXCEL
-function exportarExcel() {
-    var tabela = document.getElementById("tabelaRelatorio");
-    var wb = XLSX.utils.table_to_book(tabela, {sheet:"Dados Consolidados"});
-    var dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-    XLSX.writeFile(wb, "Relatorio_BI_Estetica_" + dataHoje + ".xlsx");
-}
-</script>
-{% endblock %}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- Menu Lateral (Sidebar) --- */
+        .sidebar {
+            width: 280px;
+            background-color: var(--primary-black);
+            color: var(--primary-white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px;
+            transition: var(--transition);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            white-space: nowrap;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        .sidebar.collapsed {
+            width: 85px;
+            padding: 25px 15px;
+        }
+
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            align-items: center;
+        }
+
+        .sidebar-toggle {
+            font-size: 1.6rem;
+            color: var(--primary-white);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .sidebar-toggle:hover {
+            color: var(--primary-purple);
+            transform: scale(1.1);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--primary-purple);
+            margin-top: 15px;
+            opacity: 1;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .logo-area {
+            opacity: 0;
+            pointer-events: none;
+            height: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            flex-grow: 1;
+            padding-left: 0;
+        }
+
+        .sidebar-menu-item {
+            margin-bottom: 12px;
+        }
+
+        .sidebar-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 14px 18px;
+            text-decoration: none;
+            color: var(--primary-white);
+            border-radius: 10px;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .sidebar.collapsed .sidebar-menu-link {
+            justify-content: center;
+            padding: 14px 0;
+        }
+
+        .sidebar.collapsed .sidebar-menu-link span {
+            display: none;
+        }
+
+        .sidebar-menu-link:hover,
+        .sidebar-menu-link.active {
+            background-color: var(--primary-purple);
+            color: var(--primary-black);
+        }
+
+        .sidebar-menu-link i {
+            font-size: 1.3rem;
+            color: var(--primary-purple);
+            transition: var(--transition);
+        }
+
+        .sidebar-menu-link:hover i,
+        .sidebar-menu-link.active i {
+            color: var(--primary-black);
+        }
+
+        .sidebar-footer {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar.collapsed .sidebar-footer {
+            justify-content: center;
+            padding: 18px 0;
+        }
+
+        .sidebar.collapsed .sidebar-footer span {
+            display: none;
+        }
+
+        .sidebar-footer i {
+            color: var(--primary-purple);
+            font-size: 1.6rem;
+        }
+
+        /* --- Área de Conteúdo Principal --- */
+        .content-area {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: var(--transition);
+            min-width: 0;
+        }
+
+        /* --- Títulos e Botões --- */
+        .page-header h2 {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--primary-black);
+            letter-spacing: -0.5px;
+        }
+
+        .btn-export {
+            background-color: #198754;
+            color: white;
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 10px 20px;
+            border: none;
+            transition: var(--transition);
+        }
+
+        .btn-export:hover {
+            background-color: #146c43;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(25, 135, 84, 0.2);
+        }
+
+        /* --- Cards de Relatório Estilo "Sessões Detalhadas" --- */
+        .report-container {
+            background-color: var(--primary-white);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            border: none;
+        }
+
+        .report-header-black {
+            background-color: var(--primary-black);
+            color: var(--primary-white);
+            padding: 30px;
+            text-align: center;
+        }
+
+        .report-header-black h3 {
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: 1px;
+        }
+
+        .report-header-black hr {
+            width: 60px;
+            margin: 15px auto;
+            border-top: 3px solid var(--primary-purple);
+            opacity: 1;
+        }
+
+        /* Card de Análise de Crescimento */
+        .growth-card {
+            background-color: var(--primary-black);
+            color: white;
+            border-radius: 15px;
+            border-left: 6px solid var(--primary-purple);
+            height: 100%;
+        }
+
+        .growth-card .card-title {
+            color: var(--primary-purple);
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        /* Lista de Top Procedimentos */
+        .top-list-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .list-group-item {
+            border-color: #f1f3f5;
+            padding: 15px 20px;
+        }
+
+        .badge-income {
+            background-color: rgba(207, 152, 255, 0.15);
+            color: var(--primary-black);
+            font-weight: 700;
+            border: 1px solid var(--primary-purple);
+        }
+
+        /* Gráfico */
+        .chart-wrapper {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+        }
+
+        /* Tabela Consolidada */
+        .table-premium {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            border: none;
+        }
+
+        .table-premium thead {
+            background-color: var(--primary-black);
+            color: white;
+        }
+
+        .table-premium th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            padding: 18px;
+            border: none;
+        }
+
+        .table-premium td {
+            padding: 15px 18px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f3f5;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-list sidebar-toggle" id="toggle-btn"></i>
+            <div class="logo-area">
+                <span>Clínica Estética e Spa UNISC</span>
+            </div>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-menu-item">
+                <a href="/" class="sidebar-menu-link">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span>Visão Geral</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/pacientes" class="sidebar-menu-link">
+                    <i class="bi bi-people"></i>
+                    <span>Pacientes</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/financeiro" class="sidebar-menu-link">
+                    <i class="bi bi-cash-stack"></i>
+                    <span>Financeiro</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/estatisticas" class="sidebar-menu-link">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Estatísticas</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/relatorios" class="sidebar-menu-link active">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Relatórios</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <i class="bi bi-person-circle"></i>
+            <span>Admin User</span>
+        </div>
+    </nav>
+
+    <main class="content-area">
+        
+        <div class="page-header d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-bar-chart-line-fill me-2" style="color: var(--primary-purple);"></i> Relatórios de Inteligência</h2>
+            <button onclick="exportarExcel()" class="btn-export">
+                <i class="bi bi-file-earmark-excel me-2"></i> Exportar (.xlsx)
+            </button>
+        </div>
+
+        <div class="report-container">
+            <div class="report-header-black">
+                <span class="text-uppercase small fw-bold" style="color: var(--primary-purple); letter-spacing: 2px;">Business Intelligence</span>
+                <h3>Relatório de Fechamento Clínica</h3>
+                <hr>
+            </div>
+
+            <div class="p-4 p-md-5">
+                <div class="row g-4 mb-5">
+                    <div class="col-md-6">
+                        <div class="card growth-card shadow-sm">
+                            <div class="card-body p-4">
+                                <h6 class="card-title text-uppercase mb-4">Análise de Crescimento Mensal</h6>
+                                
+                                <h1 class="display-4 fw-800 text-white mb-2">
+                                    R$ {{ "{:,.2f}".format(receita_atual).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+                                </h1>
+                                <p class="text-white-50 mb-4 fw-medium">Faturamento consolidado deste mês</p>
+                                
+                                {% if crescimento > 0 %}
+                                    <div class="p-3 rounded-3" style="background-color: rgba(25, 135, 84, 0.2); border: 1px solid #198754;">
+                                        <div class="text-success fw-bold d-flex align-items-center gap-2">
+                                            <i class="bi bi-graph-up-arrow fs-4"></i> 
+                                            <span>Alta de {{ crescimento }}% vs mês anterior</span>
+                                        </div>
+                                        <small class="text-white-50 mt-1 d-block">Base anterior: R$ {{ "{:,.2f}".format(receita_passado).replace(',', 'X').replace('.', ',').replace('X', '.') }}</small>
+                                    </div>
+                                {% elif crescimento < 0 %}
+                                    <div class="p-3 rounded-3" style="background-color: rgba(220, 53, 69, 0.2); border: 1px solid #dc3545;">
+                                        <div class="text-danger fw-bold d-flex align-items-center gap-2">
+                                            <i class="bi bi-graph-down-arrow fs-4"></i> 
+                                            <span>Retração de {{ crescimento|abs }}% vs mês anterior</span>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="p-3 rounded-3 bg-white border">
+                                        <span class="text-muted fw-bold"><i class="bi bi-dash-circle me-2"></i>Estabilidade financeira detectada.</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card top-list-card h-100">
+                            <div class="card-header bg-white border-0 pt-4 px-4">
+                                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-award-fill text-warning me-2"></i>Top 5 Procedimentos Rentáveis</h6>
+                            </div>
+                            <div class="card-body px-0">
+                                <ul class="list-group list-group-flush">
+                                    {% for proc in top_procedimentos %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ proc.tipo_procedimento }}</div>
+                                            <small class="text-muted">{{ proc.qtd_vendas }} atendimentos concluídos</small>
+                                        </div>
+                                        <span class="badge badge-income rounded-pill px-3 py-2">
+                                            R$ {{ "{:,.2f}".format(proc.total_receita).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+                                        </span>
+                                    </li>
+                                    {% else %}
+                                    <li class="list-group-item text-center py-4 text-muted">Aguardando dados para consolidação.</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-wrapper mb-5">
+                    <h6 class="fw-bold text-dark mb-4"><i class="bi bi-calendar-range me-2 text-primary"></i>Evolução da Receita Bruta (6 Meses)</h6>
+                    <div style="height: 300px;">
+                        <canvas id="graficoVendas"></canvas>
+                    </div>
+                </div>
+
+                <div class="table-premium">
+                    <div class="bg-black text-white p-3 px-4 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold small text-uppercase tracking-wider">Banco de Dados Consolidado</h6>
+                        <span class="badge bg-secondary small">{{ lista_relatorio|length }} Registros</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="tabelaRelatorio">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Paciente</th>
+                                    <th>Procedimento</th>
+                                    <th class="text-center">Sessões</th>
+                                    <th>Valor (R$)</th>
+                                    <th>Pagamento</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for linha in lista_relatorio %}
+                                <tr>
+                                    <td class="text-muted fw-medium">
+                                        {% if linha.data_hora and linha.data_hora|length >= 10 %}
+                                            {{ linha.data_hora[8:10] }}/{{ linha.data_hora[5:7] }}/{{ linha.data_hora[0:4] }}
+                                        {% else %}
+                                            {{ linha.data_hora }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="fw-bold text-dark">{{ linha.nome_completo }}</td>
+                                    <td class="text-secondary">{{ linha.tipo_procedimento }}</td>
+                                    <td class="text-center fw-bold">{{ linha.sessoes_previstas }}</td>
+                                    <td class="fw-bold text-success">
+                                        R$ {{ "{:,.2f}".format(linha.valor_cobrado | float).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+                                    </td>
+                                    <td>
+                                        <span class="badge {{ 'bg-success' if linha.status_pagamento == 'Pago' else 'bg-warning text-dark' }}">
+                                            {{ linha.status_pagamento }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {{ 'bg-dark' if linha.status == 'Finalizado' else 'bg-light text-dark border' }}">
+                                            {{ linha.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Sidebar Toggle
+            const toggleBtn = document.getElementById('toggle-btn');
+            const sidebar = document.getElementById('sidebar');
+            toggleBtn.addEventListener('click', () => sidebar.classList.toggle('collapsed'));
+
+            // Gráfico de Vendas
+            const ctxVendas = document.getElementById('graficoVendas').getContext('2d');
+            new Chart(ctxVendas, {
+                type: 'line',
+                data: {
+                    labels: {{ meses_labels | tojson }},
+                    datasets: [{
+                        label: 'Receita (R$)',
+                        data: {{ receita_dados | tojson }},
+                        borderColor: '#CF98FF',
+                        backgroundColor: 'rgba(207, 152, 255, 0.1)',
+                        borderWidth: 4,
+                        fill: true,
+                        pointBackgroundColor: '#000',
+                        pointBorderColor: '#CF98FF',
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            grid: { color: '#f1f3f5' }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        });
+
+        function exportarExcel() {
+            var tabela = document.getElementById("tabelaRelatorio");
+            var wb = XLSX.utils.table_to_book(tabela, {sheet:"BI_Estetica_UNISC"});
+            var dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+            XLSX.writeFile(wb, "Relatorio_BI_Estetica_" + dataHoje + ".xlsx");
+        }
+    </script>
+</body>
+</html>

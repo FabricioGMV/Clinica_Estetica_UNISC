@@ -2,70 +2,434 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>{{ 'Editar' if paciente else 'Novo' }} Paciente</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ 'Editar' if paciente else 'Novo' }} Paciente - Estética UNISC</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-white: #ffffff;
+            --primary-black: #000000;
+            --primary-purple: #CF98FF;
+            --text-color: #333333;
+            --bg-color: #f4f7f6;
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden; /* Evita rolagem horizontal acidental */
+        }
+
+        /* --- Menu Lateral (Sidebar) --- */
+        .sidebar {
+            width: 280px;
+            background-color: var(--primary-black);
+            color: var(--primary-white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px;
+            transition: var(--transition);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            z-index: 1000;
+        }
+
+        /* Estado colapsado do menu */
+        .sidebar.collapsed {
+            width: 85px;
+            padding: 25px 15px;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            align-items: center;
+        }
+
+        .sidebar.collapsed .logo-area span,
+        .sidebar.collapsed .sidebar-menu-link span,
+        .sidebar.collapsed .sidebar-footer span {
+            display: none; /* Esconde os textos */
+        }
+
+        .sidebar.collapsed .sidebar-menu-link {
+            justify-content: center;
+            padding: 14px 0;
+        }
+
+        .sidebar.collapsed .sidebar-footer {
+            justify-content: center;
+            padding: 18px 0;
+        }
+
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 40px;
+            transition: var(--transition);
+        }
+
+        .sidebar-toggle {
+            font-size: 1.6rem;
+            color: var(--primary-white);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .sidebar-toggle:hover {
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--primary-purple);
+            margin-top: 25px;
+            white-space: nowrap;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            flex-grow: 1;
+            padding-left: 0;
+        }
+
+        .sidebar-menu-item {
+            margin-bottom: 12px;
+        }
+
+        .sidebar-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 14px 18px;
+            text-decoration: none;
+            color: var(--primary-white);
+            border-radius: 10px;
+            transition: var(--transition);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .sidebar-menu-link:hover,
+        .sidebar-menu-link.active {
+            background-color: var(--primary-purple);
+            color: var(--primary-black);
+        }
+
+        .sidebar-menu-link i {
+            font-size: 1.3rem;
+            color: var(--primary-purple);
+        }
+        .sidebar-menu-link:hover i,
+        .sidebar-menu-link.active i {
+            color: var(--primary-black);
+        }
+
+        .sidebar-footer {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+        }
+        .sidebar-footer i {
+            color: var(--primary-purple);
+            font-size: 1.6rem;
+        }
+
+        /* --- Área de Conteúdo Principal --- */
+        .content-area {
+            flex-grow: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: var(--transition);
+        }
+
+        /* --- Wrapper para centralizar todo o bloco --- */
+        .content-wrapper {
+            max-width: 1000px;
+            width: 100%;
+            margin: 0 auto; /* Essa é a mágica para centralizar horizontalmente */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Botão de Voltar --- */
+        .btn-voltar {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1rem;
+            transition: var(--transition);
+            margin-bottom: 20px;
+            align-self: flex-start;
+        }
+        
+        .btn-voltar i {
+            font-size: 1.3rem;
+        }
+
+        .btn-voltar:hover {
+            color: var(--primary-purple);
+        }
+
+        /* --- Título da Página --- */
+        .content-header {
+            margin-bottom: 30px;
+        }
+
+        .content-header h1 {
+            font-size: 30px;
+            font-weight: bold;
+            color: var(--primary-black);
+            margin-bottom: 5px;
+        }
+
+        .content-header p {
+            color: #666;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        /* --- Formulário Customizado --- */
+        .form-wrapper {
+            background-color: var(--primary-white);
+            border-radius: 15px;
+            padding: 35px;
+            box-shadow: var(--card-shadow);
+            width: 100%; /* Garante que ocupe todo o espaço do wrapper */
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--primary-black);
+            margin-bottom: 8px;
+        }
+
+        /* Customização dos Inputs Bootstrap */
+        .form-control {
+            border-radius: 8px;
+            padding: 12px 15px;
+            border: 1px solid #dee2e6;
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-purple);
+            box-shadow: 0 0 0 0.25rem rgba(207, 152, 255, 0.25);
+        }
+
+        .form-check-input:checked {
+            background-color: var(--primary-purple);
+            border-color: var(--primary-purple);
+        }
+
+        .form-check-label {
+            font-weight: 500;
+            color: var(--text-color);
+            cursor: pointer;
+        }
+
+        /* Customização dos Botões */
+        .btn-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .btn-primary-custom {
+            background-color: var(--primary-purple);
+            color: var(--primary-black);
+            border: none;
+            font-weight: bold;
+            padding: 12px 30px;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .btn-primary-custom:hover {
+            background-color: #b87cf0;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary-custom {
+            background-color: transparent;
+            color: var(--text-color);
+            border: 1px solid #ccc;
+            font-weight: bold;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .btn-secondary-custom:hover {
+            background-color: #f8f9fa;
+            color: var(--text-color);
+        }
+    </style>
 </head>
-<body class="bg-light">
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h4 class="mb-0">{{ 'Editar Paciente' if paciente else 'Cadastrar Novo Paciente' }}</h4>
-                    </div>
-                    <div class="card-body">
-                        <form id="formPaciente" method="POST" action="{{ '/paciente/' ~ paciente.id ~ '/editar' if paciente else '/paciente/novo' }}">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label>Nome Completo</label>
-                                    <input type="text" name="nome_completo" class="form-control" value="{{ paciente.nome_completo if paciente else '' }}" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label>E-mail</label>
-                                    <input type="email" name="email" class="form-control" value="{{ paciente.email if paciente else '' }}" required>
-                                </div>
-                            </div>
-                            
-                            <div class="row mb-3">
-                                <div class="col-md-4">
-                                    <label>Telefone / WhatsApp</label>
-                                    <input type="text" name="telefone" id="telefone" class="form-control" value="{{ paciente.telefone if paciente else '' }}" required placeholder="+55 11 90000-0000 ou +1 555...">
-                                </div>
-                                <div class="col-md-4">
-                                    <label>CPF</label>
-                                    <input type="text" name="cpf" id="cpf" class="form-control" value="{{ paciente.cpf if paciente else '' }}" placeholder="000.000.000-00" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label>Data de Nascimento</label>
-                                    <input type="date" name="data_nascimento" id="data_nascimento" class="form-control" value="{{ paciente.data_nascimento if paciente else '' }}" required>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label>Histórico Médico (Alergias, restrições)</label>
-                                <textarea name="historico_medico" class="form-control" rows="3">{{ paciente.historico_medico if paciente else '' }}</textarea>
-                            </div>
-
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="termo_consentimento" id="termo" {% if paciente and paciente.termo_consentimento %}checked{% endif %} required>
-                                <label class="form-check-label" for="termo">Assinou Termo de Consentimento?</label>
-                            </div>
-                            <div class="form-check mb-4">
-                                <input class="form-check-input" type="checkbox" name="autorizacao_imagem" id="imagem" {% if paciente and paciente.autorizacao_imagem %}checked{% endif %} required>
-                                <label class="form-check-label" for="imagem">Autorizou Uso de Imagem?</label>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary">Salvar</button>
-                            <a href="{{ '/paciente/' ~ paciente.id if paciente else '/pacientes' }}" class="btn btn-secondary">Cancelar</a>
-                        </form>
-                    </div>
-                </div>
+<body>
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-list sidebar-toggle" id="sidebarToggle"></i>
+            <div class="logo-area">
+                <span>Clínica Estética e Spa UNISC</span>
             </div>
         </div>
-    </div>
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-menu-item">
+                <a href="/" class="sidebar-menu-link">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span>Visão Geral</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/pacientes" class="sidebar-menu-link active">
+                    <i class="bi bi-people"></i>
+                    <span>Pacientes</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/financeiro" class="sidebar-menu-link">
+                    <i class="bi bi-cash-stack"></i>
+                    <span>Financeiro</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/estatisticas" class="sidebar-menu-link">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Estatísticas</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/relatorios" class="sidebar-menu-link">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Relatórios</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <i class="bi bi-person-circle"></i>
+            <span>Admin User</span>
+        </div>
+    </nav>
+
+    <main class="content-area">
+        <div class="content-wrapper">
+            
+            <a href="{{ '/paciente/' ~ paciente.id if paciente else '/pacientes' }}" class="btn-voltar">
+                <i class="bi bi-arrow-left-circle"></i> Voltar
+            </a>
+
+            <header class="content-header">
+                <h1>{{ 'Editar Paciente' if paciente else 'Cadastrar Novo Paciente' }}</h1>
+                <p>Preencha os dados abaixo com atenção.</p>
+            </header>
+
+            <div class="form-wrapper">
+                <form id="formPaciente" method="POST" action="{{ '/paciente/' ~ paciente.id ~ '/editar' if paciente else '/paciente/novo' }}">
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Nome Completo</label>
+                            <input type="text" name="nome_completo" class="form-control shadow-sm" value="{{ paciente.nome_completo if paciente else '' }}" required>
+                        </div>
+                        <div class="col-md-6 mt-3 mt-md-0">
+                            <label class="form-label">E-mail</label>
+                            <input type="email" name="email" class="form-control shadow-sm" value="{{ paciente.email if paciente else '' }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">Telefone / WhatsApp</label>
+                            <input type="text" name="telefone" id="telefone" class="form-control shadow-sm" value="{{ paciente.telefone if paciente else '' }}" required placeholder="+55 11 90000-0000 ou +1 555...">
+                        </div>
+                        <div class="col-md-4 mt-3 mt-md-0">
+                            <label class="form-label">CPF</label>
+                            <input type="text" name="cpf" id="cpf" class="form-control shadow-sm" value="{{ paciente.cpf if paciente else '' }}" placeholder="000.000.000-00" required>
+                        </div>
+                        <div class="col-md-4 mt-3 mt-md-0">
+                            <label class="form-label">Data de Nascimento</label>
+                            <input type="date" name="data_nascimento" id="data_nascimento" class="form-control shadow-sm" value="{{ paciente.data_nascimento if paciente else '' }}" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Histórico Médico (Alergias, restrições)</label>
+                        <textarea name="historico_medico" class="form-control shadow-sm" rows="3" placeholder="Insira informações relevantes sobre a saúde do paciente...">{{ paciente.historico_medico if paciente else '' }}</textarea>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="termo_consentimento" id="termo" {% if paciente and paciente.termo_consentimento %}checked{% endif %} required>
+                        <label class="form-check-label" for="termo">O paciente assinou o Termo de Consentimento Livre e Esclarecido (TCLE)?</label>
+                    </div>
+                    
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" name="autorizacao_imagem" id="imagem" {% if paciente and paciente.autorizacao_imagem %}checked{% endif %} required>
+                        <label class="form-check-label" for="imagem">O paciente autorizou o Uso de Imagem (Fotos de Antes/Depois)?</label>
+                    </div>
+
+                    <div class="btn-actions">
+                        <button type="submit" class="btn-primary-custom">
+                            <i class="bi bi-check-circle me-1"></i> Salvar Paciente
+                        </button>
+                        <a href="{{ '/paciente/' ~ paciente.id if paciente else '/pacientes' }}" class="btn-secondary-custom">
+                            Cancelar
+                        </a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </main>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- Script do Menu Lateral (Sidebar Toggle) ---
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('collapsed');
+                });
+            }
+
+            // --- Validações de Máscara (Mantidas como estavam) ---
             const cpfInput = document.getElementById('cpf');
             const telInput = document.getElementById('telefone');
             const dataInput = document.getElementById('data_nascimento'); 
@@ -83,11 +447,10 @@
                 });
             }
 
-            // --- Nova Máscara Dinâmica de Telefone ---
+            // --- Máscara Dinâmica de Telefone ---
             if (telInput) {
                 telInput.addEventListener('input', function (e) {
                     let raw = e.target.value;
-                    // Mantém apenas o '+' e os números
                     let v = raw.replace(/[^\d+]/g, ''); 
                     
                     if (v.length === 0) {
@@ -95,25 +458,21 @@
                         return;
                     }
 
-                    // Força que a string inicie com '+'
                     if (v[0] !== '+') {
                         v = '+' + v.replace(/\+/g, '');
                     } else {
-                        // Remove '+' que a pessoa possa ter digitado no meio
                         v = '+' + v.substring(1).replace(/\+/g, '');
                     }
 
-                    // Regra: Se for +55, aplica a máscara Brasileira
                     if (v.startsWith('+55')) {
-                        let numerosBr = v.substring(3); // Pega apenas os números após o DDI
-                        if (numerosBr.length > 11) numerosBr = numerosBr.substring(0, 11); // Limita a 11 dígitos BR
+                        let numerosBr = v.substring(3);
+                        if (numerosBr.length > 11) numerosBr = numerosBr.substring(0, 11);
                         
                         let masked = '+55';
                         if (numerosBr.length > 0) {
-                            masked += ' ' + numerosBr.substring(0, 2); // Adiciona DDD
+                            masked += ' ' + numerosBr.substring(0, 2); 
                         }
                         if (numerosBr.length > 2) {
-                            // Mágica da transição Fixo (10) vs Celular (11)
                             if (numerosBr.length <= 10) {
                                 masked += ' ' + numerosBr.substring(2, 6);
                                 if (numerosBr.length > 6) {
@@ -126,14 +485,12 @@
                         }
                         e.target.value = masked;
                     } 
-                    // Regra: Se for qualquer outro DDI Internacional, máscara livre
                     else {
-                        if (v.length > 16) v = v.substring(0, 16); // Limite de bom senso internacional
+                        if (v.length > 16) v = v.substring(0, 16);
                         e.target.value = v; 
                     }
                 });
 
-                // Se houver um telefone salvo no banco de dados, simula um "input" para formatar ele na tela
                 if(telInput.value) {
                     telInput.dispatchEvent(new Event('input'));
                 }
@@ -143,7 +500,6 @@
             if (form) {
                 form.addEventListener('submit', function(e) {
                     
-                    // 1. Validação da Data de Nascimento (Impede anos absurdos)
                     if (dataInput && dataInput.value) {
                         let anoDigitado = parseInt(dataInput.value.split('-')[0]); 
                         let anoAtual = new Date().getFullYear();
@@ -156,7 +512,6 @@
                         }
                     }
 
-                    // 2. Validação do CPF: Se digitou algo, DEVE ter 11 números
                     if (cpfInput && cpfInput.value) {
                         let cpfNumeros = cpfInput.value.replace(/\D/g, '');
                         if (cpfNumeros.length !== 11) {
@@ -167,12 +522,10 @@
                         }
                     }
 
-                    // 3. Nova Validação Flexível do Telefone
                     if (telInput && telInput.value) {
                         let textVal = telInput.value;
                         let telNumeros = textVal.replace(/\D/g, '');
                         
-                        // Se for Brasil
                         if (textVal.startsWith('+55')) {
                             if (telNumeros.length < 12 || telNumeros.length > 13) {
                                 e.preventDefault();
@@ -181,7 +534,6 @@
                                 return;
                             }
                         } 
-                        // Se for Internacional
                         else {
                             if (telNumeros.length < 8) {
                                 e.preventDefault();
@@ -192,12 +544,10 @@
                         }
                     }
 
-                    // 4. Limpeza final para salvar no Banco de Dados de forma padronizada
                     if (cpfInput && cpfInput.value) {
                         cpfInput.value = cpfInput.value.replace(/\D/g, '');
                     }
                     if (telInput && telInput.value) {
-                        // Mantém apenas números e o sinal de '+' no começo
                         telInput.value = telInput.value.replace(/[^\d+]/g, '');
                     }
                 });

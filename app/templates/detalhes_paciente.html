@@ -1,264 +1,570 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes de {{ paciente.nome_completo }} - Estética UNISC</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-{% block title %}Detalhes de {{ paciente.nome_completo }} - Estética UNISC{% endblock %}
-
-{% block content %}
-<div class="row mb-4">
-    <div class="col-12 d-flex justify-content-between align-items-center">
-        <div>
-            <h2 class="text-primary fw-bold">Ficha Cadastral do Paciente</h2>
-            <p class="text-muted mb-0">Gerencie e atualize as informações fundamentais e anamnese.</p>
-        </div>
-        <a href="/pacientes" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Voltar para Lista
-        </a>
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-lg-4 mb-4">
-        <div class="card shadow-sm border-0 h-100 text-center">
-            <div class="card-body d-flex flex-column justify-content-center align-items-center py-5">
-                <div class="mb-4 position-relative">
-                    <img src="/static/uploads/perfis/paciente_{{ paciente.id }}.jpg" 
-                         onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
-                         alt="Foto de {{ paciente.nome_completo }}" 
-                         class="rounded-circle img-thumbnail shadow-sm" 
-                         style="width: 160px; height: 160px; object-fit: cover;">
-                </div>
-                
-                <h4 class="fw-bold text-dark mb-1">{{ paciente.nome_completo }}</h4>
-                <p class="text-muted small mb-3">ID do Paciente: #{{ paciente.id }}</p>
-                
-                <hr class="w-100 text-muted my-3">
-                
-                <div class="text-start w-100 px-3">
-                    <p class="mb-2">
-                        <strong><i class="bi bi-telephone text-primary me-2"></i> Telefone:</strong> <br>
-                        {% if paciente.telefone %}
-                            <a href="https://wa.me/{{ paciente.telefone | replace('+', '') | replace(' ', '') | replace('-', '') }}" target="_blank" class="text-decoration-none">
-                                <i class="bi bi-whatsapp text-success me-1"></i>
-                                <span class="text-muted">{{ paciente.telefone[:3] ~ ' ' ~ paciente.telefone[3:5] ~ ' ' ~ paciente.telefone[5:10] ~ '-' ~ paciente.telefone[10:] if paciente.telefone and paciente.telefone|length >= 13 else paciente.telefone }}</span>
-                            </a>
-                        {% else %}
-                            <span class="text-muted">Não informado</span>
-                        {% endif %}
-                    </p>
-                    <p class="mb-0"><strong><i class="bi bi-envelope text-primary me-2"></i> E-mail:</strong> <br><span class="text-muted text-break">{{ paciente.email or 'Não informado' }}</span></p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-8 mb-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Editar Informações</h5>
-            </div>
-            <div class="card-body p-4">
-                <form id="formDetalhesPaciente" action="/paciente/{{ paciente.id }}/detalhes" method="POST" enctype="multipart/form-data">
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-12">
-                            <label for="nome_completo" class="form-label fw-semibold">Nome Completo</label>
-                            <input type="text" class="form-control" id="nome_completo" name="nome_completo" value="{{ paciente.nome_completo }}" required>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="email" class="form-label fw-semibold">E-mail</label>
-                            <input type="email" class="form-control" id="email" name="email" value="{{ paciente.email or '' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="telefone" class="form-label fw-semibold">Telefone</label>
-                            <input type="text" class="form-control" id="telefone" name="telefone" value="{{ paciente.telefone or '' }}" placeholder="+55 11 90000-0000 ou +1 555...">
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="cpf" class="form-label fw-semibold">CPF</label>
-                            <input type="text" class="form-control" id="cpf" name="cpf" value="{{ paciente.cpf or '' }}" placeholder="000.000.000-00">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="data_nascimento" class="form-label fw-semibold">Data de Nascimento</label>
-                            <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" value="{{ paciente.data_nascimento or '' }}">
-                        </div>
-                    </div>
-
-                    <div class="row mb-4">
-                        <div class="col-md-12">
-                            <label for="foto_perfil" class="form-label fw-semibold">Atualizar Foto de Perfil</label>
-                            <input type="file" class="form-control" id="foto_perfil" name="foto_perfil" accept="image/*">
-                            <div class="form-text">Envie um arquivo quadrado em formatos PNG ou JPG para melhor enquadramento.</div>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label for="historico_medico" class="form-label fw-semibold">Histórico Médico / Anamnese</label>
-                        <textarea class="form-control" id="historico_medico" name="historico_medico" rows="4">{{ paciente.historico_medico or '' }}</textarea>
-                    </div>
-
-                    <div class="card bg-light border-0 p-3 mb-4">
-                        <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-shield-check me-2"></i>Consentimentos Legais</h6>
-                        <div class="form-check form-switch mb-2">
-                            <input class="form-check-input" type="checkbox" role="switch" id="termo_consentimento" name="termo_consentimento" value="1" {% if paciente.termo_consentimento %}checked{% endif %}>
-                            <label class="form-check-label text-dark" for="termo_consentimento">Termo de Consentimento Assinado</label>
-                        </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" id="autorizacao_imagem" name="autorizacao_imagem" value="1" {% if paciente.autorizacao_imagem %}checked{% endif %}>
-                            <label class="form-check-label text-dark" for="autorizacao_imagem">Autorização para Uso de Imagem</label>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100">Salvar Alterações</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const cpfInput = document.getElementById('cpf');
-        const telInput = document.getElementById('telefone');
-        const dataInput = document.getElementById('data_nascimento'); 
-        const form = document.getElementById('formDetalhesPaciente');
-
-        // --- Máscara CPF (XXX.XXX.XXX-XX) ---
-        if (cpfInput) {
-            cpfInput.addEventListener('input', function (e) {
-                let v = e.target.value.replace(/\D/g, ''); 
-                if (v.length > 11) v = v.substring(0, 11); 
-                v = v.replace(/(\d{3})(\d)/, '$1.$2');
-                v = v.replace(/(\d{3})(\d)/, '$1.$2');
-                v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-                e.target.value = v;
-            });
-
-            // Dispara evento para formatar caso já venha preenchido do banco
-            if(cpfInput.value) {
-                cpfInput.dispatchEvent(new Event('input'));
-            }
+    <style>
+        :root {
+            --primary-white: #ffffff;
+            --primary-black: #000000;
+            --primary-purple: #CF98FF;
+            --text-color: #333333;
+            --bg-color: #f4f7f6;
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
-        // --- Nova Máscara Dinâmica de Telefone ---
-        if (telInput) {
-            telInput.addEventListener('input', function (e) {
-                let raw = e.target.value;
-                // Mantém apenas o '+' e os números
-                let v = raw.replace(/[^\d+]/g, ''); 
-                
-                if (v.length === 0) {
-                    e.target.value = '';
-                    return;
-                }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
 
-                // Força que a string inicie com '+'
-                if (v[0] !== '+') {
-                    v = '+' + v.replace(/\+/g, '');
-                } else {
-                    v = '+' + v.substring(1).replace(/\+/g, '');
-                }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
 
-                // Regra: Se for +55, aplica a máscara Brasileira
-                if (v.startsWith('+55')) {
-                    let numerosBr = v.substring(3); 
-                    if (numerosBr.length > 11) numerosBr = numerosBr.substring(0, 11); 
+        /* --- Menu Lateral (Sidebar) com Animação --- */
+        .sidebar {
+            width: 280px;
+            background-color: var(--primary-black);
+            color: var(--primary-white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px;
+            transition: var(--transition);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            white-space: nowrap;
+            z-index: 100;
+        }
+
+        .sidebar.collapsed {
+            width: 85px;
+            padding: 25px 15px;
+        }
+
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 40px;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            align-items: center;
+        }
+
+        .sidebar-toggle {
+            font-size: 1.6rem;
+            color: var(--primary-white);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .sidebar-toggle:hover {
+            color: var(--primary-purple);
+            transform: scale(1.1);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--primary-purple);
+            margin-top: 15px;
+            opacity: 1;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .logo-area {
+            opacity: 0;
+            pointer-events: none;
+            height: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            flex-grow: 1;
+            padding-left: 0;
+        }
+
+        .sidebar-menu-item {
+            margin-bottom: 12px;
+        }
+
+        .sidebar-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 14px 18px;
+            text-decoration: none;
+            color: var(--primary-white);
+            border-radius: 10px;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .sidebar.collapsed .sidebar-menu-link {
+            justify-content: center;
+            padding: 14px 0;
+        }
+
+        .sidebar-menu-link span {
+            opacity: 1;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-menu-link span {
+            opacity: 0;
+            width: 0;
+            display: none;
+        }
+
+        .sidebar-menu-link:hover,
+        .sidebar-menu-link.active {
+            background-color: var(--primary-purple);
+            color: var(--primary-black);
+        }
+
+        .sidebar-menu-link i {
+            font-size: 1.3rem;
+            color: var(--primary-purple);
+            transition: var(--transition);
+        }
+
+        .sidebar-menu-link:hover i,
+        .sidebar-menu-link.active i {
+            color: var(--primary-black);
+        }
+
+        .sidebar-footer {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-footer {
+            justify-content: center;
+            padding: 18px 0;
+        }
+
+        .sidebar-footer span {
+            opacity: 1;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-footer span {
+            display: none;
+            opacity: 0;
+        }
+
+        .sidebar-footer i {
+            color: var(--primary-purple);
+            font-size: 1.6rem;
+        }
+
+        /* --- Área de Conteúdo Principal --- */
+        .content-area {
+            flex-grow: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: var(--transition);
+            width: 100%;
+        }
+
+        /* --- Overrides do Bootstrap para o seu Tema --- */
+        .text-primary {
+            color: var(--primary-purple) !important;
+        }
+        
+        .bg-primary {
+            background-color: var(--primary-purple) !important;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-purple) !important;
+            color: var(--primary-black) !important;
+            border: none !important;
+            box-shadow: 0 4px 10px rgba(207, 152, 255, 0.3) !important;
+            font-weight: bold;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(207, 152, 255, 0.5) !important;
+            background-color: #c282ff !important;
+        }
+
+        .btn-outline-secondary {
+            border: 2px solid var(--primary-black);
+            color: var(--primary-black);
+            font-weight: bold;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: var(--primary-black);
+            color: var(--primary-white);
+        }
+
+        .card {
+            border-radius: 15px;
+            box-shadow: var(--card-shadow) !important;
+            border: none !important;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-purple);
+            box-shadow: 0 0 0 0.25rem rgba(207, 152, 255, 0.25);
+        }
+
+        .form-check-input:checked {
+            background-color: var(--primary-purple);
+            border-color: var(--primary-purple);
+        }
+        
+        .img-thumbnail {
+            border-color: var(--primary-purple);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-list sidebar-toggle" id="toggle-btn"></i>
+            <div class="logo-area">
+                <span>Clínica Estética e Spa UNISC</span>
+            </div>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-menu-item">
+                <a href="/" class="sidebar-menu-link">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span>Visão Geral</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/pacientes" class="sidebar-menu-link active">
+                    <i class="bi bi-people"></i>
+                    <span>Pacientes</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/financeiro" class="sidebar-menu-link">
+                    <i class="bi bi-cash-stack"></i>
+                    <span>Financeiro</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/estatisticas" class="sidebar-menu-link">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Estatísticas</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/relatorios" class="sidebar-menu-link">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Relatórios</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <i class="bi bi-person-circle"></i>
+            <span>Admin User</span>
+        </div>
+    </nav>
+
+    <main class="content-area">
+        
+        <div class="row mb-4">
+            <div class="col-12 d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="fw-bold" style="color: var(--primary-black);">Ficha Cadastral do Paciente</h2>
+                    <p class="text-muted mb-0">Gerencie e atualize as informações fundamentais e anamnese.</p>
+                </div>
+                <a href="/pacientes" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Voltar para Lista
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body d-flex flex-column justify-content-center align-items-center py-5">
+                        <div class="mb-4 position-relative">
+                            <img src="/static/uploads/perfis/paciente_{{ paciente.id }}.jpg" 
+                                 onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
+                                 alt="Foto de {{ paciente.nome_completo }}" 
+                                 class="rounded-circle img-thumbnail shadow-sm" 
+                                 style="width: 160px; height: 160px; object-fit: cover;">
+                        </div>
+                        
+                        <h4 class="fw-bold text-dark mb-1">{{ paciente.nome_completo }}</h4>
+                        <p class="text-muted small mb-3">ID do Paciente: #{{ paciente.id }}</p>
+                        
+                        <hr class="w-100 text-muted my-3">
+                        
+                        <div class="text-start w-100 px-3">
+                            <p class="mb-2">
+                                <strong><i class="bi bi-telephone text-primary me-2"></i> Telefone:</strong> <br>
+                                {% if paciente.telefone %}
+                                    <a href="https://wa.me/{{ paciente.telefone | replace('+', '') | replace(' ', '') | replace('-', '') }}" target="_blank" class="text-decoration-none">
+                                        <i class="bi bi-whatsapp text-success me-1"></i>
+                                        <span class="text-muted">{{ paciente.telefone[:3] ~ ' ' ~ paciente.telefone[3:5] ~ ' ' ~ paciente.telefone[5:10] ~ '-' ~ paciente.telefone[10:] if paciente.telefone and paciente.telefone|length >= 13 else paciente.telefone }}</span>
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Não informado</span>
+                                {% endif %}
+                            </p>
+                            <p class="mb-0"><strong><i class="bi bi-envelope text-primary me-2"></i> E-mail:</strong> <br><span class="text-muted text-break">{{ paciente.email or 'Não informado' }}</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8 mb-4">
+                <div class="card">
+                    <div class="card-header bg-white border-0 pt-4 px-4">
+                        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Editar Informações</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="formDetalhesPaciente" action="/paciente/{{ paciente.id }}/detalhes" method="POST" enctype="multipart/form-data">
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="nome_completo" class="form-label fw-semibold">Nome Completo</label>
+                                    <input type="text" class="form-control" id="nome_completo" name="nome_completo" value="{{ paciente.nome_completo }}" required>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label fw-semibold">E-mail</label>
+                                    <input type="email" class="form-control" id="email" name="email" value="{{ paciente.email or '' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="telefone" class="form-label fw-semibold">Telefone</label>
+                                    <input type="text" class="form-control" id="telefone" name="telefone" value="{{ paciente.telefone or '' }}" placeholder="+55 11 90000-0000 ou +1 555...">
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="cpf" class="form-label fw-semibold">CPF</label>
+                                    <input type="text" class="form-control" id="cpf" name="cpf" value="{{ paciente.cpf or '' }}" placeholder="000.000.000-00">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="data_nascimento" class="form-label fw-semibold">Data de Nascimento</label>
+                                    <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" value="{{ paciente.data_nascimento or '' }}">
+                                </div>
+                            </div>
+
+                            <div class="row mb-4">
+                                <div class="col-md-12">
+                                    <label for="foto_perfil" class="form-label fw-semibold">Atualizar Foto de Perfil</label>
+                                    <input type="file" class="form-control" id="foto_perfil" name="foto_perfil" accept="image/*">
+                                    <div class="form-text">Envie um arquivo quadrado em formatos PNG ou JPG para melhor enquadramento.</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="historico_medico" class="form-label fw-semibold">Histórico Médico / Anamnese</label>
+                                <textarea class="form-control" id="historico_medico" name="historico_medico" rows="4">{{ paciente.historico_medico or '' }}</textarea>
+                            </div>
+
+                            <div class="card bg-light border-0 p-3 mb-4" style="box-shadow: none !important;">
+                                <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-shield-check me-2"></i>Consentimentos Legais</h6>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="termo_consentimento" name="termo_consentimento" value="1" {% if paciente.termo_consentimento %}checked{% endif %}>
+                                    <label class="form-check-label text-dark" for="termo_consentimento">Termo de Consentimento Assinado</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="autorizacao_imagem" name="autorizacao_imagem" value="1" {% if paciente.autorizacao_imagem %}checked{% endif %}>
+                                    <label class="form-check-label text-dark" for="autorizacao_imagem">Autorização para Uso de Imagem</label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">Salvar Alterações</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Lógica do Menu Lateral (Sidebar) ---
+            const toggleBtn = document.getElementById('toggle-btn');
+            const sidebar = document.getElementById('sidebar');
+
+            if (toggleBtn && sidebar) {
+                toggleBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('collapsed');
+                });
+            }
+
+            // --- Lógicas de Máscara e Validação (Mantidas Intactas) ---
+            const cpfInput = document.getElementById('cpf');
+            const telInput = document.getElementById('telefone');
+            const dataInput = document.getElementById('data_nascimento'); 
+            const form = document.getElementById('formDetalhesPaciente');
+
+            // --- Máscara CPF (XXX.XXX.XXX-XX) ---
+            if (cpfInput) {
+                cpfInput.addEventListener('input', function (e) {
+                    let v = e.target.value.replace(/\D/g, ''); 
+                    if (v.length > 11) v = v.substring(0, 11); 
+                    v = v.replace(/(\d{3})(\d)/, '$1.$2');
+                    v = v.replace(/(\d{3})(\d)/, '$1.$2');
+                    v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                    e.target.value = v;
+                });
+
+                if(cpfInput.value) {
+                    cpfInput.dispatchEvent(new Event('input'));
+                }
+            }
+
+            // --- Nova Máscara Dinâmica de Telefone ---
+            if (telInput) {
+                telInput.addEventListener('input', function (e) {
+                    let raw = e.target.value;
+                    let v = raw.replace(/[^\d+]/g, ''); 
                     
-                    let masked = '+55';
-                    if (numerosBr.length > 0) {
-                        masked += ' ' + numerosBr.substring(0, 2); 
+                    if (v.length === 0) {
+                        e.target.value = '';
+                        return;
                     }
-                    if (numerosBr.length > 2) {
-                        if (numerosBr.length <= 10) {
-                            masked += ' ' + numerosBr.substring(2, 6);
-                            if (numerosBr.length > 6) {
-                                masked += '-' + numerosBr.substring(6, 10);
+
+                    if (v[0] !== '+') {
+                        v = '+' + v.replace(/\+/g, '');
+                    } else {
+                        v = '+' + v.substring(1).replace(/\+/g, '');
+                    }
+
+                    if (v.startsWith('+55')) {
+                        let numerosBr = v.substring(3); 
+                        if (numerosBr.length > 11) numerosBr = numerosBr.substring(0, 11); 
+                        
+                        let masked = '+55';
+                        if (numerosBr.length > 0) {
+                            masked += ' ' + numerosBr.substring(0, 2); 
+                        }
+                        if (numerosBr.length > 2) {
+                            if (numerosBr.length <= 10) {
+                                masked += ' ' + numerosBr.substring(2, 6);
+                                if (numerosBr.length > 6) {
+                                    masked += '-' + numerosBr.substring(6, 10);
+                                }
+                            } else {
+                                masked += ' ' + numerosBr.substring(2, 7);
+                                masked += '-' + numerosBr.substring(7, 11);
                             }
-                        } else {
-                            masked += ' ' + numerosBr.substring(2, 7);
-                            masked += '-' + numerosBr.substring(7, 11);
                         }
-                    }
-                    e.target.value = masked;
-                } 
-                // Regra: Se for qualquer outro DDI, máscara livre
-                else {
-                    if (v.length > 16) v = v.substring(0, 16); 
-                    e.target.value = v; 
-                }
-            });
-
-            // Dispara evento para formatar caso já venha preenchido do banco
-            if(telInput.value) {
-                telInput.dispatchEvent(new Event('input'));
-            }
-        }
-
-        // --- Validações de Envio ao Salvar ---
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                
-                // 1. Validação da Data de Nascimento
-                if (dataInput && dataInput.value) {
-                    let anoDigitado = parseInt(dataInput.value.split('-')[0]); 
-                    let anoAtual = new Date().getFullYear();
-
-                    if (anoDigitado < 1900 || anoDigitado > anoAtual) {
-                        e.preventDefault(); 
-                        alert(`Erro: O ano de nascimento (${anoDigitado}) é inválido. Insira um ano entre 1900 e ${anoAtual}.`);
-                        dataInput.focus();
-                        return; 
-                    }
-                }
-
-                // 2. Validação do CPF: Se preenchido, DEVE ter 11 números
-                if (cpfInput && cpfInput.value) {
-                    let cpfNumeros = cpfInput.value.replace(/\D/g, '');
-                    if (cpfNumeros.length > 0 && cpfNumeros.length !== 11) {
-                        e.preventDefault(); 
-                        alert('Erro: O CPF precisa ter exatamente 11 dígitos.');
-                        cpfInput.focus();
-                        return; 
-                    }
-                }
-
-                // 3. Validação Flexível do Telefone
-                if (telInput && telInput.value) {
-                    let textVal = telInput.value;
-                    let telNumeros = textVal.replace(/\D/g, '');
-                    
-                    if (textVal.startsWith('+55')) {
-                        if (telNumeros.length > 0 && (telNumeros.length < 12 || telNumeros.length > 13)) {
-                            e.preventDefault();
-                            alert('Erro: Para números do Brasil (+55), insira o DDD e o número correto (10 ou 11 dígitos).');
-                            telInput.focus();
-                            return;
-                        }
+                        e.target.value = masked;
                     } 
                     else {
-                        if (telNumeros.length > 0 && telNumeros.length < 8) {
-                            e.preventDefault();
-                            alert('Erro: O telefone internacional parece muito curto. Verifique o DDI e o número.');
-                            telInput.focus();
-                            return;
+                        if (v.length > 16) v = v.substring(0, 16); 
+                        e.target.value = v; 
+                    }
+                });
+
+                if(telInput.value) {
+                    telInput.dispatchEvent(new Event('input'));
+                }
+            }
+
+            // --- Validações de Envio ao Salvar ---
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    
+                    if (dataInput && dataInput.value) {
+                        let anoDigitado = parseInt(dataInput.value.split('-')[0]); 
+                        let anoAtual = new Date().getFullYear();
+
+                        if (anoDigitado < 1900 || anoDigitado > anoAtual) {
+                            e.preventDefault(); 
+                            alert(`Erro: O ano de nascimento (${anoDigitado}) é inválido. Insira um ano entre 1900 e ${anoAtual}.`);
+                            dataInput.focus();
+                            return; 
                         }
                     }
-                }
 
-                // 4. Limpeza final para salvar no Banco de Dados
-                if (cpfInput && cpfInput.value) {
-                    cpfInput.value = cpfInput.value.replace(/\D/g, '');
-                }
-                if (telInput && telInput.value) {
-                    telInput.value = telInput.value.replace(/[^\d+]/g, '');
-                }
-            });
-        }
-    });
-</script>
-{% endblock %}
+                    if (cpfInput && cpfInput.value) {
+                        let cpfNumeros = cpfInput.value.replace(/\D/g, '');
+                        if (cpfNumeros.length > 0 && cpfNumeros.length !== 11) {
+                            e.preventDefault(); 
+                            alert('Erro: O CPF precisa ter exatamente 11 dígitos.');
+                            cpfInput.focus();
+                            return; 
+                        }
+                    }
+
+                    if (telInput && telInput.value) {
+                        let textVal = telInput.value;
+                        let telNumeros = textVal.replace(/\D/g, '');
+                        
+                        if (textVal.startsWith('+55')) {
+                            if (telNumeros.length > 0 && (telNumeros.length < 12 || telNumeros.length > 13)) {
+                                e.preventDefault();
+                                alert('Erro: Para números do Brasil (+55), insira o DDD e o número correto (10 ou 11 dígitos).');
+                                telInput.focus();
+                                return;
+                            }
+                        } 
+                        else {
+                            if (telNumeros.length > 0 && telNumeros.length < 8) {
+                                e.preventDefault();
+                                alert('Erro: O telefone internacional parece muito curto. Verifique o DDI e o número.');
+                                telInput.focus();
+                                return;
+                            }
+                        }
+                    }
+
+                    if (cpfInput && cpfInput.value) {
+                        cpfInput.value = cpfInput.value.replace(/\D/g, '');
+                    }
+                    if (telInput && telInput.value) {
+                        telInput.value = telInput.value.replace(/[^\d+]/g, '');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

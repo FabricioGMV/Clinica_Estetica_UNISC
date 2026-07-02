@@ -1,52 +1,435 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pacientes - Estética UNISC</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --primary-white: #ffffff;
+            --primary-black: #000000;
+            --primary-purple: #CF98FF;
+            --text-color: #333333;
+            --bg-color: #f4f7f6;
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
 
-{% block title %}Pacientes - Estética UNISC{% endblock %}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Lista de Pacientes</h2>
-    <a href="/paciente/novo" class="btn btn-success"><i class="bi bi-plus-lg"></i> Novo Paciente</a>
-</div>
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
 
-<div class="card shadow-sm border-0">
-    <div class="card-body">
-        <table class="table table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Nome</th>
-                    <th>Telefone</th>
-                    <th>CPF</th>
-                    <th class="text-end">Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in pacientes %}
-                <tr>
-                    <td class="fw-bold">{{ p.nome_completo }}</td>
-                    
-                    <td>
-                        {{ p.telefone[:3] ~ ' ' ~ p.telefone[3:5] ~ ' ' ~ p.telefone[5:10] ~ '-' ~ p.telefone[10:] if p.telefone and p.telefone|length >= 13 else p.telefone }}
-                    </td>
-                    
-                    <td>
-                        {{ p.cpf[:3] ~ '.' ~ p.cpf[3:6] ~ '.' ~ p.cpf[6:9] ~ '-' ~ p.cpf[9:] if p.cpf and p.cpf|length == 11 else p.cpf }}
-                    </td>
-                    
-                    <td class="text-end">
-                        <a href="/paciente/{{ p.id }}" class="btn btn-sm btn-outline-primary">Ver Histórico</a>
-                        <a href="/paciente/{{ p.id }}/detalhes" class="btn btn-sm btn-outline-primary">Perfil</a>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" class="text-center text-muted py-4">
-                        <i class="bi bi-inbox fs-4 d-block mb-2"></i>
-                        Nenhum paciente cadastrado ainda.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endblock %}
+        /* --- Menu Lateral (Sidebar) com Animação --- */
+        .sidebar {
+            width: 280px;
+            background-color: var(--primary-black);
+            color: var(--primary-white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px;
+            transition: var(--transition);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            white-space: nowrap; /* Evita que o texto quebre ao encolher */
+            z-index: 100;
+        }
+
+        /* Classe que será ativada via JS para encolher o menu */
+        .sidebar.collapsed {
+            width: 85px;
+            padding: 25px 15px;
+        }
+
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 40px;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            align-items: center; /* Centraliza o ícone de 3 linhas */
+        }
+
+        .sidebar-toggle {
+            font-size: 1.6rem;
+            color: var(--primary-white);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .sidebar-toggle:hover {
+            color: var(--primary-purple);
+            transform: scale(1.1);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--primary-purple);
+            margin-top: 15px;
+            opacity: 1;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .logo-area {
+            opacity: 0;
+            pointer-events: none;
+            height: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            flex-grow: 1;
+        }
+
+        .sidebar-menu-item {
+            margin-bottom: 12px;
+        }
+
+        .sidebar-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 14px 18px;
+            text-decoration: none;
+            color: var(--primary-white);
+            border-radius: 10px;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .sidebar.collapsed .sidebar-menu-link {
+            justify-content: center;
+            padding: 14px 0;
+        }
+
+        .sidebar-menu-link span {
+            opacity: 1;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-menu-link span {
+            opacity: 0;
+            width: 0;
+            display: none;
+        }
+
+        .sidebar-menu-link:hover,
+        .sidebar-menu-link.active {
+            background-color: var(--primary-purple);
+            color: var(--primary-black);
+        }
+
+        .sidebar-menu-link i {
+            font-size: 1.3rem;
+            color: var(--primary-purple);
+            transition: var(--transition);
+        }
+
+        .sidebar-menu-link:hover i,
+        .sidebar-menu-link.active i {
+            color: var(--primary-black);
+        }
+
+        .sidebar-footer {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-footer {
+            justify-content: center;
+            padding: 18px 0;
+        }
+
+        .sidebar-footer span {
+            opacity: 1;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-footer span {
+            display: none;
+            opacity: 0;
+        }
+
+        .sidebar-footer i {
+            color: var(--primary-purple);
+            font-size: 1.6rem;
+        }
+
+        /* --- Área de Conteúdo Principal --- */
+        .content-area {
+            flex-grow: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            transition: var(--transition);
+            width: 100%;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-header h2 {
+            font-size: 26px;
+            color: var(--primary-black);
+        }
+
+        /* --- Botões Customizados --- */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: var(--transition);
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-purple);
+            color: var(--primary-black);
+            box-shadow: 0 4px 10px rgba(207, 152, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(207, 152, 255, 0.5);
+            background-color: #c282ff;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid var(--primary-purple);
+            color: var(--primary-black);
+            padding: 6px 14px;
+            font-size: 0.85rem;
+        }
+
+        .btn-outline:hover {
+            background-color: var(--primary-purple);
+            color: var(--primary-black);
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* --- Card da Tabela --- */
+        .table-card {
+            background-color: var(--primary-white);
+            border-radius: 15px;
+            padding: 25px 30px;
+            box-shadow: var(--card-shadow);
+            overflow-x: auto;
+        }
+
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 1rem;
+        }
+
+        .custom-table th {
+            text-align: left;
+            padding: 18px 15px;
+            border-bottom: 2px solid var(--bg-color);
+            color: #888;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+
+        .custom-table th.text-end {
+            text-align: right;
+        }
+
+        .custom-table td {
+            padding: 18px 15px;
+            border-bottom: 1px solid var(--bg-color);
+            color: var(--text-color);
+            vertical-align: middle;
+        }
+
+        .custom-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .custom-table tbody tr {
+            transition: var(--transition);
+        }
+
+        .custom-table tbody tr:hover {
+            background-color: #faf7ff;
+        }
+
+        .fw-bold {
+            font-weight: 600;
+            color: var(--primary-black);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #999;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: var(--primary-purple);
+            margin-bottom: 15px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-list sidebar-toggle" id="toggle-btn"></i>
+            <div class="logo-area">
+                <span>Clínica Estética e Spa UNISC</span>
+            </div>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-menu-item">
+                <a href="/" class="sidebar-menu-link">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span>Visão Geral</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/pacientes" class="sidebar-menu-link active">
+                    <i class="bi bi-people"></i>
+                    <span>Pacientes</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/financeiro" class="sidebar-menu-link">
+                    <i class="bi bi-cash-stack"></i>
+                    <span>Financeiro</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/estatisticas" class="sidebar-menu-link">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Estatísticas</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/relatorios" class="sidebar-menu-link">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Relatórios</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <i class="bi bi-person-circle"></i>
+            <span>Admin User</span>
+        </div>
+    </nav>
+
+    <main class="content-area">
+        
+        <div class="page-header">
+            <h2>Lista de Pacientes</h2>
+            <a href="/paciente/novo" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> Novo Paciente
+            </a>
+        </div>
+
+        <div class="table-card">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Telefone</th>
+                        <th>CPF</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in pacientes %}
+                    <tr>
+                        <td class="fw-bold">{{ p.nome_completo }}</td>
+                        
+                        <td>
+                            {{ p.telefone[:3] ~ ' ' ~ p.telefone[3:5] ~ ' ' ~ p.telefone[5:10] ~ '-' ~ p.telefone[10:] if p.telefone and p.telefone|length >= 13 else p.telefone }}
+                        </td>
+                        
+                        <td>
+                            {{ p.cpf[:3] ~ '.' ~ p.cpf[3:6] ~ '.' ~ p.cpf[6:9] ~ '-' ~ p.cpf[9:] if p.cpf and p.cpf|length == 11 else p.cpf }}
+                        </td>
+                        
+                        <td>
+                            <div class="actions-cell">
+                                <a href="/paciente/{{ p.id }}" class="btn btn-outline">Ver Histórico</a>
+                                <a href="/paciente/{{ p.id }}/detalhes" class="btn btn-outline">Perfil</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4">
+                            <div class="empty-state">
+                                <i class="bi bi-inbox"></i>
+                                <p>Nenhum paciente cadastrado ainda.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.getElementById('toggle-btn');
+            const sidebar = document.getElementById('sidebar');
+
+            toggleBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('collapsed');
+            });
+        });
+    </script>
+</body>
+</html>

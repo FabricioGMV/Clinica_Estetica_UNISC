@@ -1,184 +1,446 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Sessão - Estética UNISC</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-{% block title %}Registrar Sessão - Estética{% endblock %}
+    <style>
+        :root {
+            --primary-white: #ffffff;
+            --primary-black: #0f172a;
+            --primary-purple: #CF98FF;
+            --text-color: #334155;
+            --bg-color: #f8fafc;
+            --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+            --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
 
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-10">
-        <div class="card shadow-sm border-primary">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0"><i class="bi bi-clipboard2-pulse"></i> Registrar Atendimento</h4>
-                <small>Paciente: {{ paciente.nome_completo }} | Procedimento: {{ agendamento.tipo_procedimento }}</small>
-            </div>
-            <div class="card-body">
-                <form method="POST" id="formRegistroSessao" enctype="multipart/form-data">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Início da Sessão</label>
-                            <input type="datetime-local" id="data_hora_iniciado" name="data_hora_iniciado" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Término da Sessão</label>
-                            <input type="datetime-local" id="data_hora_finalizacao" name="data_hora_finalizacao" class="form-control" required>
-                        </div>
-                    </div>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
 
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Aluno Responsável</label>
-                            <input type="text" name="aluno_responsavel" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Professor Supervisor</label>
-                            <input type="text" name="professor_supervisor" class="form-control" required>
-                        </div>
-                    </div>
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Ações Realizadas (Descrição técnica detalhada)</label>
-                        <textarea name="acoes_realizadas" class="form-control" rows="3" placeholder="Ex: Aplicação de toxina botulínica 20 unidades..." required></textarea>
-                    </div>
+        /* --- Menu Lateral (Sidebar) --- */
+        .sidebar {
+            width: 280px;
+            flex-shrink: 0;
+            background-color: #000000;
+            color: var(--primary-white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px;
+            transition: var(--transition);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            z-index: 1000;
+        }
 
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold"><i class="bi bi-camera"></i> Foto Antes</label>
-                            <input type="file" name="foto_antes" class="form-control" accept="image/*">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold"><i class="bi bi-camera-fill"></i> Foto Depois</label>
-                            <input type="file" name="foto_depois" class="form-control" accept="image/*">
-                        </div>
-                    </div>
+        .sidebar.collapsed { width: 85px; padding: 25px 15px; }
+        .sidebar.collapsed .logo-area span, 
+        .sidebar.collapsed .sidebar-menu-link span, 
+        .sidebar.collapsed .sidebar-footer span { display: none; }
+        .sidebar.collapsed .sidebar-header { align-items: center; }
+        .sidebar.collapsed .sidebar-menu-link { justify-content: center; padding: 14px 0; }
 
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Receitas / Recomendações pós-procedimento</label>
-                            <textarea name="receitas_recomendadas" class="form-control" rows="2"></textarea>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Observações da Execução (Intercorrências, etc.)</label>
-                            <textarea name="observacoes_execucao" class="form-control" rows="2"></textarea>
-                        </div>
-                    </div>
+        .sidebar-header { display: flex; flex-direction: column; align-items: flex-start; gap: 15px; margin-bottom: 40px; }
+        .sidebar-toggle { font-size: 1.6rem; color: var(--primary-white); cursor: pointer; transition: var(--transition); }
+        .sidebar-toggle:hover { color: var(--primary-purple); transform: scale(1.1); }
+        .logo-area { display: flex; align-items: center; font-weight: bold; font-size: 1.1rem; color: var(--primary-purple); margin-top: 15px; white-space: nowrap; }
 
-                    <div class="mb-4 p-3 bg-light rounded border-start border-success border-4">
-                        <label class="text-success fw-bold form-label">Observação Final da Sessão (Evolução geral)</label>
-                        <input type="text" name="observacao_final" class="form-control border-success" placeholder="Como o paciente reagiu ao tratamento hoje?">
-                    </div>
+        .sidebar-menu { list-style: none; flex-grow: 1; padding: 0; }
+        .sidebar-menu-item { margin-bottom: 12px; }
+        .sidebar-menu-link { display: flex; align-items: center; gap: 18px; padding: 14px 18px; text-decoration: none; color: var(--primary-white); border-radius: 12px; transition: var(--transition); font-weight: 500; }
+        .sidebar-menu-link:hover, .sidebar-menu-link.active { background-color: var(--primary-purple); color: #000; }
+        .sidebar-menu-link i { font-size: 1.3rem; color: var(--primary-purple); transition: var(--transition); }
+        .sidebar-menu-link:hover i, .sidebar-menu-link.active i { color: #000; }
 
-                    {% if agendamento.sessoes_previstas > 1 %}
-                        {% set total_sessoes_feitas = qtd_sessoes if qtd_sessoes is defined else 0 %}
-                        {% set precisa_retorno = total_sessoes_feitas + 1 < agendamento.sessoes_previstas %}
+        .sidebar-footer { display: flex; align-items: center; gap: 18px; padding: 18px; border-top: 1px solid rgba(255, 255, 255, 0.1); white-space: nowrap; }
+        .sidebar-footer i { color: var(--primary-purple); font-size: 1.6rem; }
 
-                    <div class="mb-4 p-3 bg-white rounded border {{ 'border-warning shadow-sm' if precisa_retorno else 'border-secondary' }}">
-                        <label class="form-label fw-bold {{ 'text-danger' if precisa_retorno else 'text-muted' }}">
-                            <i class="bi bi-calendar-plus"></i> Agendar Próxima Sessão (Retorno) {{ '*' if precisa_retorno else '(Opcional)' }}
-                        </label>
-                        <p class="text-muted small mb-2">
-                            Este procedimento tem {{ agendamento.sessoes_previstas }} sessões previstas. 
-                            {% if precisa_retorno %}
-                                <span class="text-danger fw-bold">Atenção: Como ainda há sessões pendentes no cronograma básico, definir a data do retorno é obrigatório!</span>
-                            {% else %}
-                                Como o cronograma previsto original de {{ agendamento.sessoes_previstas }} sessões foi alcançado, novos retornos tornam-se sessões extras de acompanhamento opcional.
-                            {% endif %}
-                        </p>
-                        <input type="datetime-local" id="data_hora_retorno" name="data_hora_retorno" class="form-control {{ 'border-danger' if precisa_retorno else '' }}" {{ 'required' if precisa_retorno else '' }}>
-                    </div>
-                    {% endif %}
+        /* --- Conteúdo Central --- */
+        .content-area {
+            flex: 1;
+            min-width: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
 
-                    <div class="d-flex justify-content-end gap-2">
-                        <a href="/paciente/{{ paciente.id }}" class="btn btn-secondary">Cancelar</a>
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Salvar Registro</button>
-                    </div>
-                </form>
+        .content-wrapper { max-width: 1100px; width: 100%; margin: 0 auto; }
+
+        .btn-voltar {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 25px;
+            transition: var(--transition);
+        }
+        .btn-voltar:hover { color: var(--primary-purple); transform: translateX(-5px); }
+
+        /* --- Card de Registro Estilo Premium --- */
+        .card-registro {
+            background-color: var(--primary-white);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            border: none;
+            overflow: hidden;
+        }
+
+        .card-header-black {
+            background-color: #000000;
+            color: var(--primary-white);
+            padding: 25px 30px;
+        }
+
+        .section-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 800;
+            color: var(--primary-purple);
+            letter-spacing: 1.5px;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-label { font-weight: 700; color: var(--primary-black); font-size: 0.9rem; margin-bottom: 8px; }
+        
+        .form-control, .form-select {
+            border-radius: 10px;
+            padding: 12px 15px;
+            border: 1px solid #e2e8f0;
+            background-color: #fcfcfc;
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-purple);
+            box-shadow: 0 0 0 4px rgba(207, 152, 255, 0.15);
+            background-color: #fff;
+        }
+
+        /* Seções do Formulário */
+        .form-section {
+            background-color: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #f1f5f9;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #000;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i { color: var(--primary-purple); font-size: 1.2rem; }
+
+        /* Estilo da Evolução / Obs Final */
+        .evolution-box {
+            background-color: #000;
+            color: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 6px solid var(--primary-purple);
+        }
+
+        .evolution-box label { color: var(--primary-purple); }
+
+        /* Botões */
+        .btn-salvar {
+            background-color: var(--primary-purple);
+            color: #000;
+            font-weight: 800;
+            padding: 14px 40px;
+            border-radius: 10px;
+            border: none;
+            transition: var(--transition);
+            box-shadow: 0 4px 12px rgba(207, 152, 255, 0.3);
+        }
+
+        .btn-salvar:hover {
+            background-color: #b875f8;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(207, 152, 255, 0.4);
+        }
+
+        .btn-cancelar {
+            background-color: transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 14px 30px;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        .btn-cancelar:hover { color: #ef4444; }
+
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-list sidebar-toggle" id="sidebarToggle"></i>
+            <div class="logo-area">
+                <span>UNISC Estética - Clínica e Spa</span>
             </div>
         </div>
-    </div>
-</div>
-{% endblock %}
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-menu-item">
+                <a href="/" class="sidebar-menu-link">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span>Visão Geral</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/pacientes" class="sidebar-menu-link active">
+                    <i class="bi bi-people"></i>
+                    <span>Pacientes</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/financeiro" class="sidebar-menu-link">
+                    <i class="bi bi-cash-stack"></i>
+                    <span>Financeiro</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/estatisticas" class="sidebar-menu-link">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Estatísticas</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/relatorios" class="sidebar-menu-link">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Relatórios</span>
+                </a>
+            </li>
+        </ul>
 
-{% block scripts %}
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const formSessao = document.getElementById('formRegistroSessao');
-        const inputInicio = document.getElementById('data_hora_iniciado');
-        const inputFim = document.getElementById('data_hora_finalizacao');
-        const inputRetorno = document.getElementById('data_hora_retorno'); // Pode não existir se a sessão for única
+        <div class="sidebar-footer">
+            <i class="bi bi-person-circle"></i>
+            <span>Admin User</span>
+        </div>
+    </nav>
 
-        if (formSessao) {
-            formSessao.addEventListener('submit', function(event) {
-                let dataAtual = new Date();
-                
-                // 1. Validação da Sessão Atual (Início e Fim)
-                if (inputInicio && inputInicio.value) {
-                    let inicioDigitado = new Date(inputInicio.value);
-                    
-                    // O registro não pode ter acontecido no futuro
-                    if (inicioDigitado > dataAtual) {
-                        event.preventDefault();
-                        alert("Erro: O início da sessão não pode ser uma data/hora no futuro.");
-                        inputInicio.focus();
-                        return;
-                    }
-                    
-                    // O registro não pode ser de um ano antes (para evitar digitação 0001)
-                    let limitePassado = new Date();
-                    limitePassado.setFullYear(dataAtual.getFullYear() - 1);
-                    if (inicioDigitado < limitePassado) {
-                        event.preventDefault();
-                        alert("Erro: O ano de início da sessão é inválido ou muito antigo.");
-                        inputInicio.focus();
-                        return;
-                    }
-                }
+    <main class="content-area">
+        <div class="content-wrapper">
+            
+            <a href="/paciente/{{ paciente.id }}" class="btn-voltar">
+                <i class="bi bi-arrow-left-circle-fill"></i> Voltar para Perfil
+            </a>
 
-                if (inputFim && inputFim.value) {
-                    let fimDigitado = new Date(inputFim.value);
-                    let inicioDigitado = new Date(inputInicio.value);
-                    
-                    if (fimDigitado > dataAtual) {
-                        event.preventDefault();
-                        alert("Erro: O término da sessão não pode ser uma data/hora no futuro.");
-                        inputFim.focus();
-                        return;
-                    }
-                    
-                    if (fimDigitado < inicioDigitado) {
-                        event.preventDefault();
-                        alert("Erro: O término da sessão não pode ser anterior ao início.");
-                        inputFim.focus();
-                        return;
-                    }
-                }
+            <div class="card-registro">
+                <div class="card-header-black">
+                    <span class="section-label">Registro Técnico</span>
+                    <h3 class="mb-2 fw-bold" style="letter-spacing: -1px;">Registrar Atendimento</h3>
+                    <p class="mb-0 text-white-50 small">
+                        <i class="bi bi-person-fill text-white"></i> {{ paciente.nome_completo }} 
+                        <span class="mx-2">|</span> 
+                        <i class="bi bi-stars" style="color: var(--primary-purple);"></i> {{ agendamento.tipo_procedimento }}
+                    </p>
+                </div>
 
-                // 2. Validação da Data de Retorno (Passado e Limite Futuro de 1 Ano)
-                if (inputRetorno && inputRetorno.value) {
-                    let retornoDigitado = new Date(inputRetorno.value);
-                    
-                    // Limite Máximo: Data de Hoje + 1 Ano
-                    let dataLimite = new Date();
-                    dataLimite.setFullYear(dataAtual.getFullYear() + 1);
+                <div class="card-body p-4 p-md-5">
+                    <form method="POST" id="formRegistroSessao" enctype="multipart/form-data">
+                        
+                        <div class="form-section">
+                            <h5 class="section-title"><i class="bi bi-clock-history"></i> Cronometragem da Sessão</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Início da Sessão</label>
+                                    <input type="datetime-local" id="data_hora_iniciado" name="data_hora_iniciado" class="form-control" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Término da Sessão</label>
+                                    <input type="datetime-local" id="data_hora_finalizacao" name="data_hora_finalizacao" class="form-control" required>
+                                </div>
+                            </div>
+                        </div>
 
-                    if (retornoDigitado > dataLimite) {
-                        event.preventDefault(); 
-                        alert("Erro: Não é possível agendar um retorno com mais de 1 ano de antecedência.");
-                        inputRetorno.focus();
-                        return;
-                    }
+                        <div class="form-section">
+                            <h5 class="section-title"><i class="bi bi-person-badge"></i> Equipe Responsável</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Aluno Responsável</label>
+                                    <input type="text" name="aluno_responsavel" class="form-control" placeholder="Nome completo do aluno" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Professor Supervisor</label>
+                                    <input type="text" name="professor_supervisor" class="form-control" placeholder="Nome do supervisor" required>
+                                </div>
+                            </div>
+                        </div>
 
-                    // Limite Mínimo: Passado (com tolerância de 30 minutos)
-                    let dataMinima = new Date();
-                    dataMinima.setMinutes(dataMinima.getMinutes() - 30);
+                        <div class="mb-4">
+                            <label class="form-label">Ações Realizadas (Descrição técnica detalhada)</label>
+                            <textarea name="acoes_realizadas" class="form-control" rows="4" placeholder="Descreva os produtos usados, técnicas aplicadas e áreas tratadas..." required></textarea>
+                        </div>
 
-                    if (retornoDigitado < dataMinima) {
-                        event.preventDefault(); 
-                        alert("Erro: A data e hora do retorno não podem estar no passado.");
-                        inputRetorno.focus();
-                        return;
-                    }
-                }
+                        <div class="form-section bg-white border">
+                            <h5 class="section-title"><i class="bi bi-camera"></i> Registro Fotográfico</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Foto Antes</label>
+                                    <input type="file" name="foto_antes" class="form-control" accept="image/*">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Foto Depois</label>
+                                    <input type="file" name="foto_depois" class="form-control" accept="image/*">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Receitas / Recomendações pós-procedimento</label>
+                                <textarea name="receitas_recomendadas" class="form-control" rows="3" placeholder="Cuidados que o paciente deve ter em casa..."></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Observações da Execução (Intercorrências)</label>
+                                <textarea name="observacoes_execucao" class="form-control" rows="3" placeholder="Houve alguma alergia, dor excessiva ou sangramento?"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="evolution-box mb-4">
+                            <label class="fw-bold text-uppercase small tracking-wider mb-2 d-block">Evolução Geral da Sessão</label>
+                            <input type="text" name="observacao_final" class="form-control border-0 bg-white" placeholder="Resuma em uma frase como o paciente reagiu ao tratamento hoje...">
+                        </div>
+
+                        {% if agendamento.sessoes_previstas > 1 %}
+                            {% set total_sessoes_feitas = qtd_sessoes if qtd_sessoes is defined else 0 %}
+                            {% set precisa_retorno = total_sessoes_feitas + 1 < agendamento.sessoes_previstas %}
+
+                        <div class="p-4 rounded-4 mb-5 shadow-sm border {{ 'border-warning-subtle bg-warning-subtle' if precisa_retorno else 'bg-light' }}">
+                            <label class="form-label fw-bold d-flex align-items-center gap-2 {{ 'text-danger' if precisa_retorno else '' }}">
+                                <i class="bi bi-calendar-plus-fill fs-5"></i> 
+                                Agendar Próxima Sessão (Retorno) {{ '*' if precisa_retorno else '(Opcional)' }}
+                            </label>
+                            <p class="text-muted small mb-3">
+                                Este procedimento tem <strong>{{ agendamento.sessoes_previstas }} sessões</strong> previstas. 
+                                {% if precisa_retorno %}
+                                    <br><span class="badge bg-danger mt-1">Obrigatório</span> <span class="text-danger fw-semibold">Cronograma incompleto: defina a data do próximo encontro.</span>
+                                {% else %}
+                                    <br><span class="badge bg-secondary mt-1">Opcional</span> Cronograma original concluído. Novos retornos são extras.
+                                {% endif %}
+                            </p>
+                            <input type="datetime-local" id="data_hora_retorno" name="data_hora_retorno" class="form-control bg-white {{ 'border-danger' if precisa_retorno else '' }}" {{ 'required' if precisa_retorno else '' }}>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-end align-items-center gap-4 pt-4 border-top">
+                            <a href="/paciente/{{ paciente.id }}" class="btn-cancelar">Descartar Alterações</a>
+                            <button type="submit" class="btn-salvar">
+                                <i class="bi bi-check-lg"></i> Finalizar Registro
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Alternar Sidebar
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            toggleBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
             });
-        }
-    });
-</script>
-{% endblock %}
+
+            // Lógica de Validação Original (Intocada)
+            const formSessao = document.getElementById('formRegistroSessao');
+            const inputInicio = document.getElementById('data_hora_iniciado');
+            const inputFim = document.getElementById('data_hora_finalizacao');
+            const inputRetorno = document.getElementById('data_hora_retorno');
+
+            if (formSessao) {
+                formSessao.addEventListener('submit', function(event) {
+                    let dataAtual = new Date();
+                    
+                    if (inputInicio && inputInicio.value) {
+                        let inicioDigitado = new Date(inputInicio.value);
+                        if (inicioDigitado > dataAtual) {
+                            event.preventDefault();
+                            alert("Erro: O início da sessão não pode ser uma data/hora no futuro.");
+                            inputInicio.focus();
+                            return;
+                        }
+                        let limitePassado = new Date();
+                        limitePassado.setFullYear(dataAtual.getFullYear() - 1);
+                        if (inicioDigitado < limitePassado) {
+                            event.preventDefault();
+                            alert("Erro: O ano de início da sessão é inválido ou muito antigo.");
+                            inputInicio.focus();
+                            return;
+                        }
+                    }
+
+                    if (inputFim && inputFim.value) {
+                        let fimDigitado = new Date(inputFim.value);
+                        let inicioDigitado = new Date(inputInicio.value);
+                        if (fimDigitado > dataAtual) {
+                            event.preventDefault();
+                            alert("Erro: O término da sessão não pode ser uma data/hora no futuro.");
+                            inputFim.focus();
+                            return;
+                        }
+                        if (fimDigitado < inicioDigitado) {
+                            event.preventDefault();
+                            alert("Erro: O término da sessão não pode ser anterior ao início.");
+                            inputFim.focus();
+                            return;
+                        }
+                    }
+
+                    if (inputRetorno && inputRetorno.value) {
+                        let retornoDigitado = new Date(inputRetorno.value);
+                        let dataLimite = new Date();
+                        dataLimite.setFullYear(dataAtual.getFullYear() + 1);
+
+                        if (retornoDigitado > dataLimite) {
+                            event.preventDefault(); 
+                            alert("Erro: Não é possível agendar um retorno com mais de 1 ano de antecedência.");
+                            inputRetorno.focus();
+                            return;
+                        }
+                        let dataMinima = new Date();
+                        dataMinima.setMinutes(dataMinima.getMinutes() - 30);
+                        if (retornoDigitado < dataMinima) {
+                            event.preventDefault(); 
+                            alert("Erro: A data e hora do retorno não podem estar no passado.");
+                            inputRetorno.focus();
+                            return;
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

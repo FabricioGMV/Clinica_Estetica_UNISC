@@ -1,270 +1,502 @@
-{% extends 'base.html' %}
-
-{% block title %}Perfil - {{ paciente.nome_completo }}{% endblock %}
-
-{% block content %}
-<div class="mb-3">
-    <a href="/pacientes" class="text-decoration-none text-secondary"><i class="bi bi-arrow-left"></i> Voltar para Pacientes</a>
-</div>
-
-<div class="row">
-    <div class="col-md-4 mb-4">
-        <div class="card shadow-sm border-primary">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Prontuário</h5>
-                <a href="/paciente/{{ paciente.id }}/editar" class="btn btn-sm btn-light text-primary">Editar</a>
-            </div>
-            <div class="card-body">
-                <h4>{{ paciente.nome_completo }}</h4>
-                <p class="text-muted mb-3">CPF: {{ paciente.cpf[:3] ~ '.' ~ paciente.cpf[3:6] ~ '.' ~ paciente.cpf[6:9] ~ '-' ~ paciente.cpf[9:] if paciente.cpf and paciente.cpf|length == 11 else paciente.cpf }}</p>
-                <hr>
-                <p class="mb-2"><strong>Telefone:</strong> <a href="https://wa.me/{{ paciente.telefone | replace('+', '') }}" target="_blank" class="text-decoration-none"><i class="bi bi-whatsapp text-success"></i> 
-                    {{ paciente.telefone[:3] ~ ' ' ~ paciente.telefone[3:5] ~ ' ' ~ paciente.telefone[5:10] ~ '-' ~ paciente.telefone[10:] if paciente.telefone and paciente.telefone|length >= 13 else paciente.telefone }}
-                </a></p>
-                <p class="mb-2"><strong>E-mail:</strong> {{ paciente.email }}</p>
-                <p class="mb-2"><strong>Nascimento:</strong> 
-                    {% if paciente.data_nascimento and paciente.data_nascimento|length >= 10 %}
-                        {{ paciente.data_nascimento[8:10] }}/{{ paciente.data_nascimento[5:7] }}/{{ paciente.data_nascimento[0:4] }}
-                    {% else %}
-                        {{ paciente.data_nascimento }}
-                    {% endif %}
-                </p>
-                <hr>
-                <h6>Histórico Médico:</h6>
-                <p class="small text-muted">{{ paciente.historico_medico or 'Nenhum histórico informado.' }}</p>
-                <div class="mt-3">
-                    <span class="badge {{ 'bg-success' if paciente.termo_consentimento else 'bg-danger' }}">Termo de Consentimento</span>
-                    <span class="badge {{ 'bg-success' if paciente.autorizacao_imagem else 'bg-danger' }}">Uso de Imagem</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-8">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="mb-0">Procedimentos e Agendamentos</h4>
-            <a href="/paciente/{{ paciente.id }}/agendar" class="btn btn-success"><i class="bi bi-plus-circle"></i> Novo Agendamento</a>
-        </div>
-
-        <div class="card shadow-sm mb-4 bg-light border-0">
-            <div class="card-body py-3">
-                <div class="row g-2">
-                    <div class="col-md-4">
-                        <input type="text" id="filtroTexto" class="form-control form-control-sm" placeholder="🔍 Buscar procedimento...">
-                    </div>
-                    <div class="col-md-4">
-                        <select id="filtroStatus" class="form-select form-select-sm">
-                            <option value="">Todos os Status</option>
-                            <option value="Aguardando">Aguardando</option>
-                            <option value="Confirmado">Confirmado</option>
-                            <option value="Finalizado">Finalizado</option>
-                            <option value="Cancelado">Cancelado</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <select id="filtroPagamento" class="form-select form-select-sm">
-                            <option value="">Status de Pagamento</option>
-                            <option value="Pago">Pago</option>
-                            <option value="Aguardando">Aguardando Pagamento</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="listaAgendamentos">
-            {% for ag in agendamentos %}
-            <div class="card mb-3 shadow-sm agendamento-card {{ 'border-secondary opacity-75' if ag.dados.status in ['Finalizado', 'Cancelado'] else 'border-info' }}" 
-                 data-status="{{ ag.dados.status }}" 
-                 data-pagamento="{{ ag.dados.status_pagamento }}">
-                
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h5 class="card-title text-primary mb-0 nome-procedimento">{{ ag.dados.tipo_procedimento }}</h5>
-                        <div class="text-end">
-                            <span class="badge {{ 'bg-warning text-dark' if ag.dados.status == 'Aguardando' else 'bg-success' if ag.dados.status == 'Confirmado' else 'bg-secondary' }}">
-                                {{ ag.dados.status }}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="row text-muted small mb-3">
-                        <div class="col-md-4">
-                            <i class="bi bi-calendar"></i> Criado para: 
-                            {% if ag.dados.data_hora and ag.dados.data_hora|length >= 16 %}
-                                {{ ag.dados.data_hora[8:10] }}/{{ ag.dados.data_hora[5:7] }}/{{ ag.dados.data_hora[0:4] }} às {{ ag.dados.data_hora[11:16] }}
-                            {% else %}
-                                {{ ag.dados.data_hora }}
-                            {% endif %}
-                        </div>
-                        <div class="col-md-4">
-                            <i class="bi bi-cash"></i> {{ ag.dados.status_pagamento }} (R$ {{ "{:,.2f}".format(ag.dados.valor_cobrado | float).replace(',', 'X').replace('.', ',').replace('X', '.') }})
-                        </div>
-                        <div class="col-md-4 text-dark fw-bold">
-                            <i class="bi bi-layers"></i> Sessões: {{ ag.sessoes|length }} de {{ ag.dados.sessoes_previstas }}
-                        </div>
-                    </div>
-
-                    {% if ag.dados.observacoes %}
-                    <div class="alert alert-light border py-2 mb-3 small texto-obs">
-                        <strong>Obs:</strong> {{ ag.dados.observacoes }}
-                    </div>
-                    {% endif %}
-
-                    <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
-                        {% if ag.dados.status in ['Finalizado', 'Cancelado'] %}
-                            <button class="btn btn-sm btn-outline-secondary" disabled title="Agendamentos encerrados não podem ser alterados."><i class="bi bi-lock-fill"></i> Bloqueado p/ Edição</button>
-                        {% else %}
-                            <a href="/agendamento/{{ ag.dados.id }}/editar" class="btn btn-sm btn-outline-primary">Editar Agendamento</a>
-                        {% endif %}
-                        
-                        {% if ag.dados.status_pagamento == 'Aguardando' and ag.dados.status != 'Cancelado' %}
-                            <form method="POST" action="/agendamento/{{ ag.dados.id }}/pagar" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-success">Confirmar Pagamento</button>
-                            </form>
-                        {% endif %}
-                        
-                        {% if ag.dados.status not in ['Finalizado', 'Cancelado'] %}
-                            <a href="/agendamento/{{ ag.dados.id }}/registrar_sessao" class="btn btn-sm btn-primary"><i class="bi bi-play-circle"></i> Registrar Nova Sessão</a>
-                            
-                            {% if ag.sessoes|length > 0 %}
-                            <form method="POST" action="/agendamento/{{ ag.dados.id }}/mudar_status/Finalizado" class="d-inline ms-auto">
-                                <button type="submit" class="btn btn-sm btn-dark" onclick="return confirm('Tem certeza que deseja encerrar todo o procedimento?')">Finalizar Tratamento</button>
-                            </form>
-                            {% endif %}
-                        {% endif %}
-
-                        {% if ag.sessoes|length > 0 %}
-                            <a href="/agendamento/{{ ag.dados.id }}/sessoes" class="btn btn-sm btn-info text-dark fw-bold ms-auto"><i class="bi bi-eye"></i> Ver Histórico de Sessões</a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% else %}
-            <div class="alert alert-secondary text-center" id="msgVazioBD">
-                Nenhum agendamento encontrado para este paciente.
-            </div>
-            {% endfor %}
-        </div>
-
-        <div id="msgFiltroVazio" class="alert alert-warning text-center" style="display: none;">
-            Nenhum procedimento encontrado com os filtros selecionados.
-        </div>
-
-        <nav aria-label="Navegação de agendamentos">
-            <ul class="pagination justify-content-center mt-4" id="paginacao">
-                </ul>
-        </nav>
-        
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    // VARIÁVEIS DE CONFIGURAÇÃO DA PAGINAÇÃO
-    const itemsPorPagina = 3; // Mude esse número para exibir mais ou menos itens por página
-    let paginaAtual = 1;
-
-    // ELEMENTOS DO DOM
-    const cards = Array.from(document.querySelectorAll('.agendamento-card'));
-    const containerPaginacao = document.getElementById('paginacao');
-    const msgFiltroVazio = document.getElementById('msgFiltroVazio');
-    const msgVazioBD = document.getElementById('msgVazioBD');
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil - {{ paciente.nome_completo }}</title>
     
-    // INPUTS DO FILTRO
-    const filtroTexto = document.getElementById('filtroTexto');
-    const filtroStatus = document.getElementById('filtroStatus');
-    const filtroPagamento = document.getElementById('filtroPagamento');
-
-    // Função que aplica os filtros e processa a paginação
-    function atualizarLista() {
-        const texto = filtroTexto.value.toLowerCase();
-        const status = filtroStatus.value;
-        const pagamento = filtroPagamento.value;
-
-        // 1. Filtrar os Cards
-        let cardsFiltrados = cards.filter(card => {
-            const cardStatus = card.getAttribute('data-status');
-            const cardPagamento = card.getAttribute('data-pagamento');
-            const cardTexto = card.innerText.toLowerCase(); // Busca no texto todo do card (Nome, obs, data)
-
-            const matchTexto = cardTexto.includes(texto);
-            const matchStatus = status === "" || cardStatus === status;
-            const matchPagamento = pagamento === "" || cardPagamento === pagamento;
-
-            return matchTexto && matchStatus && matchPagamento;
-        });
-
-        // 2. Controlar mensagens de "vazio"
-        if (cards.length > 0) {
-            msgFiltroVazio.style.display = cardsFiltrados.length === 0 ? 'block' : 'none';
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root {
+            --primary-white: #ffffff;
+            --primary-black: #000000;
+            --primary-purple: #CF98FF;
+            --text-color: #333333;
+            --bg-color: #f4f7f6;
+            --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
-        // 3. Paginação
-        const totalPaginas = Math.ceil(cardsFiltrados.length / itemsPorPagina);
-        if (paginaAtual > totalPaginas) paginaAtual = totalPaginas || 1;
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
+        }
 
-        const indiceInicio = (paginaAtual - 1) * itemsPorPagina;
-        const indiceFim = indiceInicio + itemsPorPagina;
+        /* --- Menu Lateral (Sidebar) --- */
+        .sidebar {
+            width: 280px;
+            background-color: var(--primary-black);
+            color: var(--primary-white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px;
+            transition: var(--transition);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            white-space: nowrap;
+            z-index: 100;
+        }
 
-        // 4. Esconde tudo e exibe apenas os da página atual
-        cards.forEach(card => card.style.display = 'none');
-        cardsFiltrados.slice(indiceInicio, indiceFim).forEach(card => {
-            card.style.display = 'block';
-        });
+        .sidebar.collapsed { width: 85px; padding: 25px 15px; }
+        .sidebar-header { display: flex; flex-direction: column; align-items: flex-start; gap: 15px; margin-bottom: 40px; transition: var(--transition); }
+        .sidebar.collapsed .sidebar-header { align-items: center; }
+        .sidebar-toggle { font-size: 1.6rem; color: var(--primary-white); cursor: pointer; transition: var(--transition); }
+        .sidebar-toggle:hover { color: var(--primary-purple); transform: scale(1.1); }
+        .logo-area { font-weight: bold; font-size: 1.1rem; color: var(--primary-purple); margin-top: 15px; transition: var(--transition); }
+        .sidebar.collapsed .logo-area { opacity: 0; height: 0; margin: 0; overflow: hidden; }
+        
+        .sidebar-menu { list-style: none; padding: 0; flex-grow: 1; }
+        .sidebar-menu-item { margin-bottom: 12px; }
+        .sidebar-menu-link {
+            display: flex; align-items: center; gap: 18px; padding: 14px 18px; 
+            text-decoration: none; color: var(--primary-white); border-radius: 10px; 
+            transition: var(--transition); font-weight: 500;
+        }
+        .sidebar.collapsed .sidebar-menu-link { justify-content: center; padding: 14px 0; }
+        .sidebar.collapsed .sidebar-menu-link span { display: none; }
+        .sidebar-menu-link:hover, .sidebar-menu-link.active { background-color: var(--primary-purple); color: var(--primary-black); }
+        .sidebar-menu-link i { font-size: 1.3rem; color: var(--primary-purple); transition: var(--transition); }
+        .sidebar-menu-link:hover i, .sidebar-menu-link.active i { color: var(--primary-black); }
 
-        // 5. Renderizar botões
-        renderizarBotoes(totalPaginas);
-    }
+        .sidebar-footer { display: flex; align-items: center; gap: 18px; padding: 18px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+        .sidebar.collapsed .sidebar-footer { justify-content: center; padding: 18px 0; }
+        .sidebar.collapsed .sidebar-footer span { display: none; }
+        .sidebar-footer i { color: var(--primary-purple); font-size: 1.6rem; }
 
-    function renderizarBotoes(totalPaginas) {
-        containerPaginacao.innerHTML = ''; // Limpa botões antigos
+        /* --- Área de Conteúdo --- */
+        .content-area {
+            flex-grow: 1;
+            padding: 40px;
+            width: 100%;
+            overflow-y: auto;
+        }
 
-        if (totalPaginas <= 1) return; // Não exibe paginação se só tem 1 página
+        /* --- CUSTOMIZAÇÃO DO BOOTSTRAP PARA NOSSO TEMA --- */
+        
+        /* Cards Customizados */
+        .card {
+            border: none !important;
+            border-radius: 16px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04) !important;
+            transition: transform 0.2s ease;
+        }
+        .card-header {
+            border-radius: 16px 16px 0 0 !important;
+            border-bottom: none;
+            padding: 1.2rem 1.5rem;
+        }
+        .bg-primary {
+            background-color: var(--primary-black) !important;
+            color: var(--primary-white) !important;
+        }
+        .text-primary {
+            color: #b366ff !important;
+        }
+        
+        /* Botões Customizados */
+        .btn {
+            border-radius: 8px;
+            font-weight: 600;
+            padding: 8px 16px;
+            box-shadow: none !important;
+        }
+        
+        /* Btn-Success (Novo Agendamento, Confirmar Pagamento) -> Botão Roxo */
+        .btn-success {
+            background-color: var(--primary-purple);
+            border-color: var(--primary-purple);
+            color: var(--primary-black);
+        }
+        .btn-success:hover {
+            background-color: #c282ff;
+            border-color: #c282ff;
+            color: var(--primary-black);
+            transform: translateY(-2px);
+        }
+        
+        /* Btn-Primary (Editar, Registrar Sessão) -> Fundo Preto, Texto Roxo/Branco */
+        .btn-primary {
+            background-color: var(--primary-black);
+            border-color: var(--primary-black);
+            color: var(--primary-white);
+        }
+        .btn-primary:hover {
+            background-color: #222;
+            border-color: #222;
+            color: var(--primary-purple);
+        }
 
-        // Botão Anterior
-        const btnAnterior = document.createElement('li');
-        btnAnterior.className = `page-item ${paginaAtual === 1 ? 'disabled' : ''}`;
-        btnAnterior.innerHTML = `<a class="page-link" href="#" aria-label="Anterior"><span aria-hidden="true">&laquo;</span></a>`;
-        btnAnterior.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (paginaAtual > 1) { paginaAtual--; atualizarLista(); }
-        });
-        containerPaginacao.appendChild(btnAnterior);
+        /* Btn-Outline-Primary -> Borda Roxa, Texto Preto */
+        .btn-outline-primary {
+            color: var(--primary-black);
+            border-color: var(--primary-purple);
+        }
+        .btn-outline-primary:hover {
+            background-color: var(--primary-purple);
+            color: var(--primary-black);
+            border-color: var(--primary-purple);
+        }
 
-        // Números das Páginas
-        for (let i = 1; i <= totalPaginas; i++) {
-            const btnNumero = document.createElement('li');
-            btnNumero.className = `page-item ${paginaAtual === i ? 'active' : ''}`;
-            btnNumero.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-            btnNumero.addEventListener('click', (e) => {
-                e.preventDefault();
-                paginaAtual = i;
-                atualizarLista();
+        /* Status Badges e Elementos menores */
+        .badge {
+            padding: 0.5em 0.85em;
+            border-radius: 6px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+        .badge.bg-success { background-color: var(--primary-purple) !important; color: var(--primary-black) !important; }
+        .badge.bg-danger { background-color: #ffe5e5 !important; color: #cc0000 !important; }
+        .badge.bg-warning { background-color: #fff3cd !important; color: #856404 !important; }
+        .badge.bg-secondary { background-color: #e2e3e5 !important; color: #383d41 !important; }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            padding: 10px 15px;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-purple);
+            box-shadow: 0 0 0 0.25rem rgba(207, 152, 255, 0.25);
+        }
+
+        /* Cards de Agendamento Específicos */
+        .agendamento-card {
+            border-left: 5px solid var(--primary-purple) !important;
+        }
+        .agendamento-card.opacity-75 {
+            border-left: 5px solid #ccc !important;
+            opacity: 0.7 !important;
+        }
+        .texto-obs {
+            background-color: #fcf9ff;
+            border-color: #ebd6ff !important;
+            border-radius: 8px;
+        }
+        .page-item.active .page-link {
+            background-color: var(--primary-purple);
+            border-color: var(--primary-purple);
+            color: var(--primary-black);
+        }
+        .page-link { color: var(--primary-black); }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-list sidebar-toggle" id="toggle-btn"></i>
+            <div class="logo-area">
+                <span>Clínica Estética e Spa UNISC</span>
+            </div>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-menu-item">
+                <a href="/" class="sidebar-menu-link">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span>Visão Geral</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/pacientes" class="sidebar-menu-link active">
+                    <i class="bi bi-people"></i>
+                    <span>Pacientes</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/financeiro" class="sidebar-menu-link">
+                    <i class="bi bi-cash-stack"></i>
+                    <span>Financeiro</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/estatisticas" class="sidebar-menu-link">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Estatísticas</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/relatorios" class="sidebar-menu-link">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Relatórios</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <i class="bi bi-person-circle"></i>
+            <span>Admin User</span>
+        </div>
+    </nav>
+
+    <main class="content-area">
+        <div class="mb-4">
+            <a href="/pacientes" class="text-decoration-none text-secondary fw-semibold">
+                <i class="bi bi-arrow-left"></i> Voltar para Pacientes
+            </a>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold">Prontuário</h5>
+                        <a href="/paciente/{{ paciente.id }}/editar" class="btn btn-sm btn-light text-dark fw-bold">Editar</a>
+                    </div>
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold text-dark">{{ paciente.nome_completo }}</h4>
+                        <p class="text-muted mb-3">CPF: {{ paciente.cpf[:3] ~ '.' ~ paciente.cpf[3:6] ~ '.' ~ paciente.cpf[6:9] ~ '-' ~ paciente.cpf[9:] if paciente.cpf and paciente.cpf|length == 11 else paciente.cpf }}</p>
+                        <hr class="text-muted">
+                        <p class="mb-2"><strong>Telefone:</strong> <a href="https://wa.me/{{ paciente.telefone | replace('+', '') }}" target="_blank" class="text-decoration-none text-dark"><i class="bi bi-whatsapp" style="color: #25D366;"></i> 
+                            {{ paciente.telefone[:3] ~ ' ' ~ paciente.telefone[3:5] ~ ' ' ~ paciente.telefone[5:10] ~ '-' ~ paciente.telefone[10:] if paciente.telefone and paciente.telefone|length >= 13 else paciente.telefone }}
+                        </a></p>
+                        <p class="mb-2"><strong>E-mail:</strong> {{ paciente.email }}</p>
+                        <p class="mb-2"><strong>Nascimento:</strong> 
+                            {% if paciente.data_nascimento and paciente.data_nascimento|length >= 10 %}
+                                {{ paciente.data_nascimento[8:10] }}/{{ paciente.data_nascimento[5:7] }}/{{ paciente.data_nascimento[0:4] }}
+                            {% else %}
+                                {{ paciente.data_nascimento }}
+                            {% endif %}
+                        </p>
+                        <hr class="text-muted">
+                        <h6 class="fw-bold">Histórico Médico:</h6>
+                        <p class="small text-muted">{{ paciente.historico_medico or 'Nenhum histórico informado.' }}</p>
+                        <div class="mt-4 d-flex flex-wrap gap-2">
+                            <span class="badge {{ 'bg-success' if paciente.termo_consentimento else 'bg-danger' }}">Termo de Consentimento</span>
+                            <span class="badge {{ 'bg-success' if paciente.autorizacao_imagem else 'bg-danger' }}">Uso de Imagem</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="mb-0 fw-bold">Procedimentos e Agendamentos</h4>
+                    <a href="/paciente/{{ paciente.id }}/agendar" class="btn btn-success">
+                        <i class="bi bi-plus-circle"></i> Novo Agendamento
+                    </a>
+                </div>
+
+                <div class="card mb-4 bg-white">
+                    <div class="card-body py-3">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <input type="text" id="filtroTexto" class="form-control" placeholder="🔍 Buscar procedimento...">
+                            </div>
+                            <div class="col-md-4">
+                                <select id="filtroStatus" class="form-select">
+                                    <option value="">Todos os Status</option>
+                                    <option value="Aguardando">Aguardando</option>
+                                    <option value="Confirmado">Confirmado</option>
+                                    <option value="Finalizado">Finalizado</option>
+                                    <option value="Cancelado">Cancelado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <select id="filtroPagamento" class="form-select">
+                                    <option value="">Status de Pagamento</option>
+                                    <option value="Pago">Pago</option>
+                                    <option value="Aguardando">Aguardando Pagamento</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="listaAgendamentos">
+                    {% for ag in agendamentos %}
+                    <div class="card mb-3 agendamento-card {{ 'opacity-75' if ag.dados.status in ['Finalizado', 'Cancelado'] else '' }}" 
+                         data-status="{{ ag.dados.status }}" 
+                         data-pagamento="{{ ag.dados.status_pagamento }}">
+                        
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="card-title text-primary fw-bold mb-0 nome-procedimento">{{ ag.dados.tipo_procedimento }}</h5>
+                                <div class="text-end">
+                                    <span class="badge {{ 'bg-warning text-dark' if ag.dados.status == 'Aguardando' else 'bg-success' if ag.dados.status == 'Confirmado' else 'bg-secondary' }}">
+                                        {{ ag.dados.status }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="row text-muted small mb-3">
+                                <div class="col-md-4">
+                                    <i class="bi bi-calendar"></i> Criado para: 
+                                    {% if ag.dados.data_hora and ag.dados.data_hora|length >= 16 %}
+                                        {{ ag.dados.data_hora[8:10] }}/{{ ag.dados.data_hora[5:7] }}/{{ ag.dados.data_hora[0:4] }} às {{ ag.dados.data_hora[11:16] }}
+                                    {% else %}
+                                        {{ ag.dados.data_hora }}
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    <i class="bi bi-cash"></i> {{ ag.dados.status_pagamento }} (R$ {{ "{:,.2f}".format(ag.dados.valor_cobrado | float).replace(',', 'X').replace('.', ',').replace('X', '.') }})
+                                </div>
+                                <div class="col-md-4 text-dark fw-bold">
+                                    <i class="bi bi-layers"></i> Sessões: {{ ag.sessoes|length }} de {{ ag.dados.sessoes_previstas }}
+                                </div>
+                            </div>
+
+                            {% if ag.dados.observacoes %}
+                            <div class="alert texto-obs py-2 mb-3 small">
+                                <strong>Obs:</strong> {{ ag.dados.observacoes }}
+                            </div>
+                            {% endif %}
+
+                            <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
+                                {% if ag.dados.status in ['Finalizado', 'Cancelado'] %}
+                                    <button class="btn btn-sm btn-outline-secondary" disabled title="Agendamentos encerrados não podem ser alterados."><i class="bi bi-lock-fill"></i> Bloqueado p/ Edição</button>
+                                {% else %}
+                                    <a href="/agendamento/{{ ag.dados.id }}/editar" class="btn btn-sm btn-outline-primary">Editar Agendamento</a>
+                                {% endif %}
+                                
+                                {% if ag.dados.status_pagamento == 'Aguardando' and ag.dados.status != 'Cancelado' %}
+                                    <form method="POST" action="/agendamento/{{ ag.dados.id }}/pagar" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-success">Confirmar Pagamento</button>
+                                    </form>
+                                {% endif %}
+                                
+                                {% if ag.dados.status not in ['Finalizado', 'Cancelado'] %}
+                                    <a href="/agendamento/{{ ag.dados.id }}/registrar_sessao" class="btn btn-sm btn-primary"><i class="bi bi-play-circle"></i> Registrar Nova Sessão</a>
+                                    
+                                    {% if ag.sessoes|length > 0 %}
+                                    <form method="POST" action="/agendamento/{{ ag.dados.id }}/mudar_status/Finalizado" class="d-inline ms-auto">
+                                        <button type="submit" class="btn btn-sm btn-dark" onclick="return confirm('Tem certeza que deseja encerrar todo o procedimento?')">Finalizar Tratamento</button>
+                                    </form>
+                                    {% endif %}
+                                {% endif %}
+
+                                {% if ag.sessoes|length > 0 %}
+                                    <a href="/agendamento/{{ ag.dados.id }}/sessoes" class="btn btn-sm btn-outline-dark fw-bold ms-auto"><i class="bi bi-eye"></i> Ver Histórico de Sessões</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-secondary text-center" id="msgVazioBD">
+                        Nenhum agendamento encontrado para este paciente.
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div id="msgFiltroVazio" class="alert alert-warning text-center" style="display: none;">
+                    Nenhum procedimento encontrado com os filtros selecionados.
+                </div>
+
+                <nav aria-label="Navegação de agendamentos">
+                    <ul class="pagination justify-content-center mt-4" id="paginacao">
+                    </ul>
+                </nav>
+                
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Lógica Menu Lateral Animado
+            const toggleBtn = document.getElementById('toggle-btn');
+            const sidebar = document.getElementById('sidebar');
+            toggleBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('collapsed');
             });
-            containerPaginacao.appendChild(btnNumero);
-        }
 
-        // Botão Próximo
-        const btnProximo = document.createElement('li');
-        btnProximo.className = `page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}`;
-        btnProximo.innerHTML = `<a class="page-link" href="#" aria-label="Próximo"><span aria-hidden="true">&raquo;</span></a>`;
-        btnProximo.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (paginaAtual < totalPaginas) { paginaAtual++; atualizarLista(); }
+            // Lógica Paginação e Filtros (INTOCADA DO SEU CÓDIGO)
+            const itemsPorPagina = 3; 
+            let paginaAtual = 1;
+
+            const cards = Array.from(document.querySelectorAll('.agendamento-card'));
+            const containerPaginacao = document.getElementById('paginacao');
+            const msgFiltroVazio = document.getElementById('msgFiltroVazio');
+            const msgVazioBD = document.getElementById('msgVazioBD');
+            
+            const filtroTexto = document.getElementById('filtroTexto');
+            const filtroStatus = document.getElementById('filtroStatus');
+            const filtroPagamento = document.getElementById('filtroPagamento');
+
+            function atualizarLista() {
+                const texto = filtroTexto.value.toLowerCase();
+                const status = filtroStatus.value;
+                const pagamento = filtroPagamento.value;
+
+                let cardsFiltrados = cards.filter(card => {
+                    const cardStatus = card.getAttribute('data-status');
+                    const cardPagamento = card.getAttribute('data-pagamento');
+                    const cardTexto = card.innerText.toLowerCase(); 
+
+                    const matchTexto = cardTexto.includes(texto);
+                    const matchStatus = status === "" || cardStatus === status;
+                    const matchPagamento = pagamento === "" || cardPagamento === pagamento;
+
+                    return matchTexto && matchStatus && matchPagamento;
+                });
+
+                if (cards.length > 0) {
+                    msgFiltroVazio.style.display = cardsFiltrados.length === 0 ? 'block' : 'none';
+                }
+
+                const totalPaginas = Math.ceil(cardsFiltrados.length / itemsPorPagina);
+                if (paginaAtual > totalPaginas) paginaAtual = totalPaginas || 1;
+
+                const indiceInicio = (paginaAtual - 1) * itemsPorPagina;
+                const indiceFim = indiceInicio + itemsPorPagina;
+
+                cards.forEach(card => card.style.display = 'none');
+                cardsFiltrados.slice(indiceInicio, indiceFim).forEach(card => {
+                    card.style.display = 'block';
+                });
+
+                renderizarBotoes(totalPaginas);
+            }
+
+            function renderizarBotoes(totalPaginas) {
+                containerPaginacao.innerHTML = ''; 
+
+                if (totalPaginas <= 1) return; 
+
+                const btnAnterior = document.createElement('li');
+                btnAnterior.className = `page-item ${paginaAtual === 1 ? 'disabled' : ''}`;
+                btnAnterior.innerHTML = `<a class="page-link" href="#" aria-label="Anterior"><span aria-hidden="true">&laquo;</span></a>`;
+                btnAnterior.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (paginaAtual > 1) { paginaAtual--; atualizarLista(); }
+                });
+                containerPaginacao.appendChild(btnAnterior);
+
+                for (let i = 1; i <= totalPaginas; i++) {
+                    const btnNumero = document.createElement('li');
+                    btnNumero.className = `page-item ${paginaAtual === i ? 'active' : ''}`;
+                    btnNumero.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                    btnNumero.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        paginaAtual = i;
+                        atualizarLista();
+                    });
+                    containerPaginacao.appendChild(btnNumero);
+                }
+
+                const btnProximo = document.createElement('li');
+                btnProximo.className = `page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}`;
+                btnProximo.innerHTML = `<a class="page-link" href="#" aria-label="Próximo"><span aria-hidden="true">&raquo;</span></a>`;
+                btnProximo.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (paginaAtual < totalPaginas) { paginaAtual++; atualizarLista(); }
+                });
+                containerPaginacao.appendChild(btnProximo);
+            }
+
+            filtroTexto.addEventListener('input', () => { paginaAtual = 1; atualizarLista(); });
+            filtroStatus.addEventListener('change', () => { paginaAtual = 1; atualizarLista(); });
+            filtroPagamento.addEventListener('change', () => { paginaAtual = 1; atualizarLista(); });
+
+            atualizarLista();
         });
-        containerPaginacao.appendChild(btnProximo);
-    }
-
-    // EVENT LISTENERS DOS FILTROS (Acionados sempre que o usuário digitar ou mudar a opção)
-    filtroTexto.addEventListener('input', () => { paginaAtual = 1; atualizarLista(); });
-    filtroStatus.addEventListener('change', () => { paginaAtual = 1; atualizarLista(); });
-    filtroPagamento.addEventListener('change', () => { paginaAtual = 1; atualizarLista(); });
-
-    // Inicialização ao abrir a página
-    atualizarLista();
-});
-</script>
-{% endblock %}
+    </script>
+</body>
+</html>

@@ -1,68 +1,380 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visão Geral - Estética UNISC</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --primary-white: #ffffff;
+            --primary-black: #000000;
+            --primary-purple: #CF98FF;
+            --text-color: #333333;
+            --bg-color: #f4f7f6;
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            --transition: all 0.3s ease;
+        }
 
-{% block title %}Dashboard - Estética UNISC{% endblock %}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
 
-{% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <h2 class="text-primary fw-bold">Visão Geral</h2>
-        <p class="text-muted">Acompanhe os principais indicadores da clínica.</p>
-    </div>
-</div>
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+        }
 
-<div class="row mb-4">
-    <div class="col-md-4 mb-3">
-        <div class="card text-white bg-primary shadow-sm h-100 border-0">
-            <div class="card-body text-center">
-                <i class="bi bi-people-fill fs-1 mb-2"></i>
-                <h5 class="card-title">Total de Pacientes</h5>
-                <h2 class="display-5 fw-bold">{{ total_pacientes | default('0') }}</h2>
+        /* --- Estilos do Menu Lateral (Sidebar) --- */
+        .sidebar {
+            width: 280px;
+            background-color: var(--primary-black);
+            color: var(--primary-white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px;
+            transition: var(--transition);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .sidebar-toggle {
+            font-size: 1.6rem;
+            color: var(--primary-white);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .sidebar-toggle:hover {
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--primary-purple);
+            margin-top: 25px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            flex-grow: 1;
+        }
+
+        .sidebar-menu-item {
+            margin-bottom: 12px;
+        }
+
+        .sidebar-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 14px 18px;
+            text-decoration: none;
+            color: var(--primary-white);
+            border-radius: 10px;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .sidebar-menu-link:hover,
+        .sidebar-menu-link.active {
+            background-color: var(--primary-purple);
+            color: var(--primary-black);
+        }
+
+        .sidebar-menu-link i {
+            font-size: 1.3rem;
+            color: var(--primary-purple);
+        }
+        .sidebar-menu-link:hover i,
+        .sidebar-menu-link.active i {
+            color: var(--primary-black);
+        }
+
+        .sidebar-footer {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .sidebar-footer i {
+            color: var(--primary-purple);
+            font-size: 1.6rem;
+        }
+
+        /* --- Estilos da Área de Conteúdo Principal --- */
+        .content-area {
+            flex-grow: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        /* Títulos Aumentados e Ajustados */
+        .content-header h1 {
+            font-size: 30px; /* Tamanho maior para Home Page */
+            font-weight: normal;
+            color: var(--primary-black);
+        }
+
+        .content-header p {
+            color: var(--text-color);
+            font-size: 35px; /* Tamanho igualado ao h1 */
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        /* --- Seção de Cards de KPI --- */
+        .kpi-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .kpi-card {
+            background-color: var(--primary-white);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            border-bottom: 5px solid transparent;
+            transition: var(--transition);
+        }
+        .kpi-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--primary-purple);
+        }
+
+        .kpi-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-color);
+        }
+        .kpi-card-top i {
+            color: var(--primary-purple);
+            font-size: 1.8rem;
+        }
+
+        .kpi-card-title {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .kpi-card-value {
+            font-size: 2.8rem;
+            font-weight: bold;
+            color: var(--primary-black);
+        }
+
+        /* --- Seção de Agendamentos (Tabela) --- */
+        .agendamentos-wrapper {
+            background-color: var(--primary-white);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .table-header {
+            margin-bottom: 25px;
+        }
+        .table-header h2 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-black);
+        }
+
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 1rem;
+        }
+
+        .custom-table th {
+            text-align: left;
+            padding: 18px;
+            border-bottom: 2px solid var(--bg-color);
+            color: var(--text-color);
+            font-weight: bold;
+        }
+
+        .custom-table td {
+            padding: 18px;
+            border-bottom: 1px solid var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .custom-table tr:hover {
+            background-color: #fcfaff;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #999;
+            padding: 30px;
+            font-style: italic;
+        }
+
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-list sidebar-toggle"></i>
+            <div class="logo-area">
+                <span>UNISC Estética - Clínica e Spa</span>
             </div>
         </div>
-    </div>
-    
-    <div class="col-md-4 mb-3">
-        <div class="card text-white bg-warning shadow-sm h-100 border-0">
-            <div class="card-body text-center">
-                <i class="bi bi-calendar-event-fill fs-1 mb-2"></i>
-                <h5 class="card-title">Agendamentos Pendentes</h5>
-                <h2 class="display-5 fw-bold">{{ agendamentos_pendentes | default('0') }}</h2>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-4 mb-3">
-        <div class="card text-white bg-success shadow-sm h-100 border-0">
-            <div class="card-body text-center">
-                <i class="bi bi-cash-coin fs-1 mb-2"></i>
-                <h5 class="card-title">Receita do Mês</h5>
-                <h2 class="display-5 fw-bold">R$ {{ receita_total | default('0,00') }}</h2>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row mt-4">
-    <div class="col-12 text-center">
-        <h4 class="mb-4">Acesso Rápido</h4>
-        <a href="/paciente/novo" class="btn btn-success btn-lg mx-2 px-4 shadow-sm mb-3">
-            <i class="bi bi-person-plus-fill"></i> Novo Paciente
-        </a>
-        <a href="/pacientes" class="btn btn-outline-primary btn-lg mx-2 px-4 shadow-sm mb-3">
-            <i class="bi bi-card-list"></i> Lista de Pacientes
-        </a>
         
-        <a href="/financeiro" class="btn btn-outline-success btn-lg mx-2 px-4 shadow-sm mb-3">
-            <i class="bi bi-graph-up-arrow"></i> Painel Financeiro
-        </a>
+        <ul class="sidebar-menu">
+            <li class="sidebar-menu-item">
+                <a href="/" class="sidebar-menu-link active">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span>Visão Geral</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/pacientes" class="sidebar-menu-link">
+                    <i class="bi bi-people"></i>
+                    <span>Pacientes</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/financeiro" class="sidebar-menu-link">
+                    <i class="bi bi-cash-stack"></i>
+                    <span>Financeiro</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/estatisticas" class="sidebar-menu-link">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Estatísticas</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/relatorios" class="sidebar-menu-link">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Relatórios</span>
+                </a>
+            </li>
+        </ul>
 
-        <a href="/estatisticas" class="btn btn-outline-info btn-lg mx-2 px-4 shadow-sm mb-3">
-            <i class="bi bi-pie-chart-fill"></i> Estatísticas
-        </a>
-        
-        <a href="/relatorios" class="btn btn-outline-secondary btn-lg mx-2 px-4 shadow-sm mb-3">
-            <i class="bi bi-file-earmark-text"></i> Relatórios
-        </a>
-    </div>
-</div>
-{% endblock %}
+        <div class="sidebar-footer">
+            <i class="bi bi-person-circle"></i>
+            <span>Admin User</span>
+        </div>
+    </nav>
+
+    <main class="content-area">
+        <header class="content-header">
+            <h1>Home page</h1>
+            <p>Bem-Vindo de Volta, Admin User!</p>
+        </header>
+
+        <div class="kpi-cards-grid">
+            <div class="kpi-card">
+                <div class="kpi-card-top">
+                    <i class="bi bi-people"></i>
+                    <div class="kpi-card-title">Total de Pacientes</div>
+                </div>
+                <div class="kpi-card-value">{{ total_pacientes | default('0') }}</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-card-top">
+                    <i class="bi bi-calendar-check"></i>
+                    <div class="kpi-card-title">Agendamentos Pendentes</div>
+                </div>
+                <div class="kpi-card-value">{{ agendamentos_pendentes | default('0') }}</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-card-top">
+                    <i class="bi bi-currency-dollar"></i>
+                    <div class="kpi-card-title">Receita do Mês</div>
+                </div>
+                <div class="kpi-card-value">R$ {{ receita_total | default('0,00') }}</div>
+            </div>
+        </div>
+
+        <div class="agendamentos-wrapper">
+            <div class="table-header">
+                <h2>Resumo de Agendamentos de Hoje</h2>
+            </div>
+            {% if agendamentos_hoje %}
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Nome do Paciente</th>
+                            <th>Horário</th>
+                            <th>Procedimento</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for agendamento in agendamentos_hoje %}
+                            <tr>
+                                <td>{{ agendamento[0] }}</td>
+                                <td class="formatar-horario">{{ agendamento[1] }}</td>
+                                <td>{{ agendamento[2] }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="no-data">Nenhum agendamento para hoje.</div>
+            {% endif %}
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const camposHorario = document.querySelectorAll('.formatar-horario');
+            
+            camposHorario.forEach(campo => {
+                const dataBruta = campo.textContent.trim();
+                
+                // Se a data vier com um "T" no meio (Formato ISO)
+                if (dataBruta && dataBruta.includes('T')) {
+                    try {
+                        const partes = dataBruta.split('T');
+                        const dataPartes = partes[0].split('-');
+                        
+                        const ano = dataPartes[0];
+                        const mes = dataPartes[1];
+                        const dia = dataPartes[2];
+                        const hora = partes[1].substring(0, 5); // Pega apenas o HH:MM
+                        
+                        // Substitui o conteúdo da tabela pelo texto formatado
+                        campo.textContent = `${dia}/${mes}/${ano} às ${hora}`;
+                    } catch (e) {
+                        console.error("Não foi possível formatar a data: ", dataBruta);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,122 +1,522 @@
-{% extends 'base.html' %}
-
-{% block title %}Estatísticas Clínicas{% endblock %}
-
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0"><i class="bi bi-pie-chart-fill text-info"></i> Estatísticas Operacionais</h2>
-    <a href="/relatorios" class="btn btn-outline-dark btn-sm">Ver Relatório de Vendas <i class="bi bi-arrow-right"></i></a>
-</div>
-
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card text-center shadow-sm border-0 h-100 bg-light">
-            <div class="card-body">
-                <h6 class="card-title text-muted text-uppercase mb-3">Pacientes Ativos</h6>
-                <h1 class="display-4 fw-bold text-primary">{{ total_pacientes }}</h1>
-                <p class="text-muted small">Cadastrados no sistema</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center shadow-sm border-0 h-100 bg-light">
-            <div class="card-body">
-                <h6 class="card-title text-muted text-uppercase mb-3">Agendamentos Totais</h6>
-                <h1 class="display-4 fw-bold text-dark">{{ total_agendamentos }}</h1>
-                <p class="text-muted small">Consultas/Procedimentos marcados</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center shadow-sm border-0 h-100 bg-light">
-            <div class="card-body">
-                <h6 class="card-title text-muted text-uppercase mb-3">Sessões Executadas</h6>
-                <h1 class="display-4 fw-bold text-success">{{ total_sessoes }}</h1>
-                <p class="text-muted small">Atendimentos finalizados na maca</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center shadow-sm border-0 h-100 {{ 'bg-danger text-white' if taxa_cancelamento > 20 else 'bg-light' }}">
-            <div class="card-body">
-                <h6 class="card-title text-uppercase mb-3 {{ 'text-white-50' if taxa_cancelamento > 20 else 'text-muted' }}">Taxa de Cancelamento</h6>
-                <h1 class="display-4 fw-bold">{{ taxa_cancelamento }}%</h1>
-                <p class="small {{ 'text-white-50' if taxa_cancelamento > 20 else 'text-muted' }}">Média geral da clínica</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white">
-                <h6 class="mb-0 text-muted"><i class="bi bi-bar-chart-fill"></i> Eficiência de Agendamentos (Status)</h6>
-            </div>
-            <div class="card-body" style="position: relative; height:300px; width:100%">
-                <canvas id="graficoStatus"></canvas>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-6">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white">
-                <h6 class="mb-0 text-muted"><i class="bi bi-pie-chart"></i> Proporção de Serviços Oferecidos</h6>
-            </div>
-            <div class="card-body" style="position: relative; height:300px; width:100%">
-                <canvas id="graficoProcedimentos"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    
-    // --- GRÁFICO 1: STATUS DE AGENDAMENTOS (BARRAS) ---
-    const ctxStatus = document.getElementById('graficoStatus').getContext('2d');
-    new Chart(ctxStatus, {
-        type: 'bar',
-        data: {
-            // Adicionado o filtro | safe para garantir que o JS leia como Array
-            labels: {{ labels_status | tojson | safe }},
-            datasets: [{
-                label: 'Quantidade',
-                data: {{ dados_status | tojson | safe }},
-                backgroundColor: ['#ffc107', '#0d6efd', '#198754', '#dc3545', '#6c757d'],
-                borderRadius: 5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } }
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estatísticas Clínicas - Estética UNISC</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-white: #ffffff;
+            --primary-black: #000000;
+            --primary-purple: #CF98FF;
+            --text-color: #333333;
+            --bg-color: #f4f7f6;
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
-    });
 
-    // --- GRÁFICO 2: PROCEDIMENTOS OFERECIDOS (PIZZA) ---
-    const ctxProcedimentos = document.getElementById('graficoProcedimentos').getContext('2d');
-    new Chart(ctxProcedimentos, {
-        type: 'doughnut',
-        data: {
-            // Adicionado o filtro | safe
-            labels: {{ labels_procedimentos | tojson | safe }},
-            datasets: [{
-                data: {{ dados_procedimentos | tojson | safe }},
-                backgroundColor: ['#0d6efd', '#0dcaf0', '#20c997', '#ffc107', '#fd7e14', '#dc3545'],
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'right' } }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
         }
-    });
-});
-</script>
-{% endblock %}
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- Menu Lateral (Sidebar) com Animação --- */
+        .sidebar {
+            width: 280px;
+            background-color: var(--primary-black);
+            color: var(--primary-white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px;
+            transition: var(--transition);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            white-space: nowrap;
+            z-index: 100;
+        }
+
+        .sidebar.collapsed {
+            width: 85px;
+            padding: 25px 15px;
+        }
+
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 40px;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            align-items: center;
+        }
+
+        .sidebar-toggle {
+            font-size: 1.6rem;
+            color: var(--primary-white);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .sidebar-toggle:hover {
+            color: var(--primary-purple);
+            transform: scale(1.1);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--primary-purple);
+            margin-top: 15px;
+            opacity: 1;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .logo-area {
+            opacity: 0;
+            pointer-events: none;
+            height: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            flex-grow: 1;
+        }
+
+        .sidebar-menu-item {
+            margin-bottom: 12px;
+        }
+
+        .sidebar-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 14px 18px;
+            text-decoration: none;
+            color: var(--primary-white);
+            border-radius: 10px;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .sidebar.collapsed .sidebar-menu-link {
+            justify-content: center;
+            padding: 14px 0;
+        }
+
+        .sidebar-menu-link span {
+            opacity: 1;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-menu-link span {
+            opacity: 0;
+            width: 0;
+            display: none;
+        }
+
+        .sidebar-menu-link:hover,
+        .sidebar-menu-link.active {
+            background-color: var(--primary-purple);
+            color: var(--primary-black);
+        }
+
+        .sidebar-menu-link i {
+            font-size: 1.3rem;
+            color: var(--primary-purple);
+            transition: var(--transition);
+        }
+
+        .sidebar-menu-link:hover i,
+        .sidebar-menu-link.active i {
+            color: var(--primary-black);
+        }
+
+        .sidebar-footer {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-footer {
+            justify-content: center;
+            padding: 18px 0;
+        }
+
+        .sidebar-footer span {
+            opacity: 1;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-footer span {
+            display: none;
+            opacity: 0;
+        }
+
+        .sidebar-footer i {
+            color: var(--primary-purple);
+            font-size: 1.6rem;
+        }
+
+        /* --- Área de Conteúdo Principal --- */
+        .content-area {
+            flex-grow: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            transition: var(--transition);
+            width: 100%;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-header h2 {
+            font-size: 26px;
+            color: var(--primary-black);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-header h2 i {
+            color: var(--primary-purple);
+        }
+
+        /* --- Botões Customizados --- */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: var(--transition);
+            font-size: 0.95rem;
+        }
+
+        .btn-outline-dark {
+            background-color: transparent;
+            border: 2px solid var(--primary-black);
+            color: var(--primary-black);
+        }
+
+        .btn-outline-dark:hover {
+            background-color: var(--primary-black);
+            color: var(--primary-white);
+        }
+
+        /* --- Grid de Estatísticas (Cards Superiores) --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            background-color: var(--primary-white);
+            border-radius: 15px;
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-title {
+            font-size: 0.85rem;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 15px;
+        }
+
+        .stat-value {
+            font-size: 3.2rem;
+            font-weight: 700;
+            color: var(--primary-black);
+            margin-bottom: 5px;
+            line-height: 1;
+        }
+
+        .stat-desc {
+            font-size: 0.85rem;
+            color: #999;
+        }
+
+        /* Destaques de Cores nos Cards */
+        .text-purple { color: var(--primary-purple); }
+        
+        /* Card de Perigo (Taxa de Cancelamento Alta) */
+        .stat-card.danger {
+            background-color: var(--primary-black);
+        }
+        .stat-card.danger .stat-title,
+        .stat-card.danger .stat-desc {
+            color: #aaa;
+        }
+        .stat-card.danger .stat-value {
+            color: var(--primary-purple);
+        }
+
+        /* --- Grid de Gráficos --- */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 20px;
+        }
+
+        .chart-card {
+            background-color: var(--primary-white);
+            border-radius: 15px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid var(--bg-color);
+            background-color: var(--primary-white);
+        }
+
+        .chart-header h6 {
+            font-size: 1rem;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .chart-header h6 i {
+            color: var(--primary-purple);
+        }
+
+        .chart-body {
+            padding: 25px;
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+
+        /* Ajuste responsivo para telas menores */
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-list sidebar-toggle" id="toggle-btn"></i>
+            <div class="logo-area">
+                <span>Clínica Estética e Spa UNISC</span>
+            </div>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-menu-item">
+                <a href="/" class="sidebar-menu-link">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span>Visão Geral</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/pacientes" class="sidebar-menu-link">
+                    <i class="bi bi-people"></i>
+                    <span>Pacientes</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/financeiro" class="sidebar-menu-link">
+                    <i class="bi bi-cash-stack"></i>
+                    <span>Financeiro</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/estatisticas" class="sidebar-menu-link active">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Estatísticas</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/relatorios" class="sidebar-menu-link">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Relatórios</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <i class="bi bi-person-circle"></i>
+            <span>Admin User</span>
+        </div>
+    </nav>
+
+    <main class="content-area">
+        
+        <div class="page-header">
+            <h2><i class="bi bi-pie-chart-fill"></i> Estatísticas Operacionais</h2>
+            <a href="/relatorios" class="btn btn-outline-dark">Ver Relatório de Vendas <i class="bi bi-arrow-right"></i></a>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">Pacientes Ativos</div>
+                <div class="stat-value text-purple">{{ total_pacientes }}</div>
+                <div class="stat-desc">Cadastrados no sistema</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-title">Agendamentos Totais</div>
+                <div class="stat-value">{{ total_agendamentos }}</div>
+                <div class="stat-desc">Consultas/Procedimentos</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-title">Sessões Executadas</div>
+                <div class="stat-value text-purple">{{ total_sessoes }}</div>
+                <div class="stat-desc">Atendimentos finalizados</div>
+            </div>
+
+            <div class="stat-card {{ 'danger' if taxa_cancelamento > 20 else '' }}">
+                <div class="stat-title">Taxa de Cancelamento</div>
+                <div class="stat-value">{{ taxa_cancelamento }}%</div>
+                <div class="stat-desc">Média geral da clínica</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h6><i class="bi bi-bar-chart-fill"></i> Eficiência de Agendamentos (Status)</h6>
+                </div>
+                <div class="chart-body">
+                    <canvas id="graficoStatus"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h6><i class="bi bi-pie-chart"></i> Proporção de Serviços Oferecidos</h6>
+                </div>
+                <div class="chart-body">
+                    <canvas id="graficoProcedimentos"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Toggle do Menu Lateral ---
+            const toggleBtn = document.getElementById('toggle-btn');
+            const sidebar = document.getElementById('sidebar');
+
+            toggleBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('collapsed');
+            });
+
+            // --- GRÁFICO 1: STATUS DE AGENDAMENTOS (BARRAS) ---
+            const ctxStatus = document.getElementById('graficoStatus').getContext('2d');
+            new Chart(ctxStatus, {
+                type: 'bar',
+                data: {
+                    labels: {{ labels_status | tojson }},
+                    datasets: [{
+                        label: 'Quantidade',
+                        data: {{ dados_status | tojson }},
+                        // Ajustado para se encaixar de forma neutra/moderna (mantendo tons de destaque originais, mas suavizados)
+                        backgroundColor: ['#CF98FF', '#000000', '#20c997', '#dc3545', '#6c757d'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { borderDash: [5, 5] } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // --- GRÁFICO 2: PROCEDIMENTOS OFERECIDOS (PIZZA/DOUGHNUT) ---
+            const ctxProcedimentos = document.getElementById('graficoProcedimentos').getContext('2d');
+            new Chart(ctxProcedimentos, {
+                type: 'doughnut',
+                data: {
+                    labels: {{ labels_procedimentos | tojson }},
+                    datasets: [{
+                        data: {{ dados_procedimentos | tojson }},
+                        // Paleta moderna baseada nos tons da clínica
+                        backgroundColor: ['#000000', '#CF98FF', '#333333', '#e0e0e0', '#888888', '#f4f7f6'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            position: 'right',
+                            labels: {
+                                font: { family: "'Inter', sans-serif" }
+                            }
+                        } 
+                    },
+                    cutout: '65%' // Deixa o gráfico de rosca mais fino e elegante
+                }
+            });
+        });
+    </script>
+</body>
+</html>

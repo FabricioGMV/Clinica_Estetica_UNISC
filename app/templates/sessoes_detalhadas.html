@@ -1,131 +1,727 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico de Sessões - Estética UNISC</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-{% block title %}Sessões - {{ agendamento.tipo_procedimento }}{% endblock %}
+    <style>
+        :root {
+            --primary-white: #ffffff;
+            --primary-black: #0f172a; /* Tom mais suave e moderno que o preto puro */
+            --primary-purple: #CF98FF;
+            --primary-purple-hover: #b875f8;
+            --text-color: #334155;
+            --text-muted: #64748b;
+            --bg-color: #f8fafc;
+            --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-{% block content %}
-<div class="mb-4">
-    <a href="/paciente/{{ paciente.id }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar para Perfil do Paciente</a>
-</div>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
 
-<div class="card shadow-sm mb-4 border-info">
-    <div class="card-header bg-info text-dark d-flex justify-content-between align-items-center">
-        <h4 class="mb-0">Histórico de Sessões: {{ agendamento.tipo_procedimento }}</h4>
-        <span class="badge bg-dark">Tratamento {{ agendamento.status }}</span>
-    </div>
-    <div class="card-body bg-light">
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- Menu Lateral (Sidebar) CORRIGIDO --- */
+        .sidebar {
+            width: 280px;
+            flex-shrink: 0; /* Impede que a barra seja esmagada */
+            background-color: var(--primary-black);
+            color: var(--primary-white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px;
+            transition: var(--transition);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            white-space: nowrap;
+            z-index: 100;
+        }
+
+        .sidebar.collapsed {
+            width: 85px;
+            padding: 25px 15px;
+        }
+
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 40px;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            align-items: center;
+        }
+
+        .sidebar-toggle {
+            font-size: 1.6rem;
+            color: var(--primary-white);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .sidebar-toggle:hover {
+            color: var(--primary-purple);
+            transform: scale(1.1);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--primary-purple);
+            margin-top: 15px;
+            white-space: normal; /* Altera de nowrap para normal, permitindo a quebra */
+            line-height: 1.3;    /* Dá um pequeno respiro entre as linhas de texto */
+            width: 100%;         /* Garante que o texto respeite a largura da sidebar */
+        }
+
+        .sidebar.collapsed .logo-area {
+            opacity: 0;
+            pointer-events: none;
+            height: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            flex-grow: 1;
+            padding-left: 0;
+        }
+
+        .sidebar-menu-item {
+            margin-bottom: 8px;
+        }
+
+        .sidebar-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 16px;
+            text-decoration: none;
+            color: #cbd5e1;
+            border-radius: 12px;
+            transition: var(--transition);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .sidebar.collapsed .sidebar-menu-link {
+            justify-content: center;
+            padding: 14px 0;
+        }
+
+        .sidebar-menu-link span {
+            opacity: 1;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-menu-link span {
+            opacity: 0;
+            width: 0;
+            display: none;
+        }
+
+        .sidebar-menu-link:hover,
+        .sidebar-menu-link.active {
+            background-color: rgba(207, 152, 255, 0.1);
+            color: var(--primary-purple);
+        }
+
+        .sidebar-menu-link i {
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .sidebar-footer {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            transition: var(--transition);
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+        }
+
+        .sidebar.collapsed .sidebar-footer {
+            justify-content: center;
+            padding: 18px 0;
+            background: transparent;
+        }
+
+        .sidebar-footer span {
+            opacity: 1;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .sidebar-footer span {
+            display: none;
+            opacity: 0;
+        }
+
+        .sidebar-footer i {
+            color: var(--primary-purple);
+            font-size: 1.4rem;
+        }
+
+        /* --- Área de Conteúdo Principal CORRIGIDA --- */
+        .content-area {
+            flex: 1; /* Ocupa o restante do espaço */
+            min-width: 0; /* Impede o bug de vazamento do flexbox */
+            padding: 40px;
+            transition: var(--transition);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        /* --- Botões Customizados --- */
+        .btn-custom {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: var(--transition);
+            font-size: 0.9rem;
+        }
+
+        .btn-primary-custom {
+            background-color: var(--primary-black);
+            color: var(--primary-white) !important;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
+        }
+
+        .btn-primary-custom i {
+            color: var(--primary-purple);
+        }
+
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(15, 23, 42, 0.3);
+            background-color: #1e293b;
+        }
+
+        .btn-outline-custom {
+            background-color: var(--primary-white);
+            border: 1px solid #e2e8f0;
+            color: var(--text-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .btn-outline-custom:hover {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+            color: var(--primary-black);
+        }
+
+        /* --- Painel de Resumo Moderno --- */
+        .summary-card {
+            background: linear-gradient(135deg, var(--primary-black), #1e293b);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            border: none;
+            overflow: hidden;
+            margin-bottom: 40px;
+            color: var(--primary-white);
+            position: relative;
+        }
+
+        .summary-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(207, 152, 255, 0.1));
+            pointer-events: none;
+        }
+
+        .summary-header {
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .badge-status {
+            background-color: rgba(207, 152, 255, 0.2);
+            color: var(--primary-purple);
+            font-weight: 700;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(207, 152, 255, 0.3);
+        }
+
+        .summary-body {
+            padding: 30px;
+        }
+
+        .summary-stat {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 20px;
+            height: 100%;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* --- Elementos da Sessão (Timeline Style) --- */
+        .timeline-container {
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 20px;
+            bottom: 20px;
+            width: 2px;
+            background-color: #e2e8f0;
+        }
+
+        .session-card {
+            background-color: var(--primary-white);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid #f1f5f9;
+            margin-bottom: 30px;
+            transition: var(--transition);
+            position: relative;
+            margin-left: 25px;
+        }
+        
+        .session-card::before {
+            content: '';
+            position: absolute;
+            left: -32px;
+            top: 30px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: var(--primary-purple);
+            border: 3px solid var(--bg-color);
+            z-index: 2;
+        }
+
+        .session-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px -5px rgba(0,0,0,0.08);
+            border-color: var(--primary-purple);
+        }
+
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px;
+            border-bottom: 1px solid #f1f5f9;
+            background-color: #f8fafc;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .session-badge {
+            background-color: var(--primary-black);
+            color: var(--primary-purple);
+            font-weight: 800;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+
+        .info-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px;
+            height: 100%;
+            transition: var(--transition);
+        }
+
+        .info-box:hover {
+            border-color: #cbd5e1;
+        }
+
+        .info-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary-black);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* --- Fotos --- */
+        .photo-card {
+            background-color: var(--primary-white);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .photo-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .photo-label.antes { background-color: var(--primary-white); color: var(--primary-black); }
+        .photo-label.depois { background-color: var(--primary-purple); color: var(--primary-black); }
+
+        .photo-img {
+            height: 220px;
+            width: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .photo-card:hover .photo-img {
+            transform: scale(1.05);
+        }
+
+        .obs-final-box {
+            background-color: rgba(207, 152, 255, 0.05);
+            border: 1px dashed var(--primary-purple);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-top: 65px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            background-color: var(--primary-white);
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-list sidebar-toggle" id="toggle-btn"></i>
+            <div class="logo-area">
+                <span>Clínica Estética e Spa UNISC</span>
+            </div>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-menu-item">
+                <a href="/" class="sidebar-menu-link">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span>Visão Geral</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/pacientes" class="sidebar-menu-link active">
+                    <i class="bi bi-people"></i>
+                    <span>Pacientes</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/financeiro" class="sidebar-menu-link">
+                    <i class="bi bi-cash-stack"></i>
+                    <span>Financeiro</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/estatisticas" class="sidebar-menu-link">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Estatísticas</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="/relatorios" class="sidebar-menu-link">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Relatórios</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <i class="bi bi-person-circle"></i>
+            <span>Admin User</span>
+        </div>
+    </nav>
+
+    <main class="content-area">
+        
+        <div class="page-header">
+            <div>
+                <a href="/paciente/{{ paciente.id }}" class="btn-custom btn-outline-custom">
+                    <i class="bi bi-arrow-left"></i> Voltar para o Perfil
+                </a>
+            </div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-header">
+                <div>
+                    <span class="text-uppercase" style="color: var(--primary-purple); font-size: 0.75rem; letter-spacing: 1.5px; font-weight: 700;">Plano de Tratamento</span>
+                    <h3 class="mb-0 fw-bold mt-1 text-white">{{ agendamento.tipo_procedimento }}</h3>
+                </div>
+                <span class="badge-status">
+                    Status: {{ agendamento.status }}
+                </span>
+            </div>
+            
+            <div class="summary-body">
+                <div class="row align-items-center g-4">
+                    <div class="col-md-5">
+                        <div class="summary-stat">
+                            <p class="info-title" style="color: #94a3b8;"><i class="bi bi-person text-white"></i> Paciente</p>
+                            <p class="mb-0 fw-bold fs-5 text-white">{{ paciente.nome_completo }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="summary-stat">
+                            <p class="info-title" style="color: #94a3b8;"><i class="bi bi-bar-chart-steps text-white"></i> Progresso das Sessões</p>
+                            <p class="mb-0 fw-bold fs-5 text-white">
+                                {{ sessoes|length }} <span class="fw-normal fs-6" style="color: #cbd5e1;">de {{ agendamento.sessoes_previstas }} concluídas</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-md-end">
+                        {% if agendamento.status not in ['Finalizado', 'Cancelado'] %}
+                        <a href="/agendamento/{{ agendamento.id }}/registrar_sessao" class="btn-custom btn-primary-custom w-100 justify-content-center" style="background-color: var(--primary-white); color: var(--primary-black) !important; padding: 15px;">
+                            <i class="bi bi-plus-lg" style="color: var(--primary-black);"></i> Nova Sessão
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
-            <div class="col-md-4">
-                <p class="mb-1"><strong>Paciente:</strong> {{ paciente.nome_completo }}</p>
-            </div>
-            <div class="col-md-4">
-                <p class="mb-1"><strong>Sessões Realizadas:</strong> {{ sessoes|length }} de {{ agendamento.sessoes_previstas }}</p>
-            </div>
-            <div class="col-md-4 text-end">
-                {% if agendamento.status not in ['Finalizado', 'Cancelado'] %}
-                <a href="/agendamento/{{ agendamento.id }}/registrar_sessao" class="btn btn-sm btn-primary">Registrar Nova Sessão</a>
+            <div class="col-12">
+                {% if sessoes %}
+                    <div class="timeline-container">
+                        {% for sessao in sessoes %}
+                        <div class="session-card">
+                            
+                            <div class="session-header">
+                                <div class="session-badge">SESSÃO #{{ sessao.numero_sessao }}</div>
+                                <span class="text-muted small fw-semibold">
+                                    <i class="bi bi-calendar-check me-1" style="color: var(--primary-purple);"></i> Realizada em: {{ sessao.data_hora_iniciado[:10] }}
+                                </span>
+                            </div>
+                            
+                            <div class="card-body px-4 pt-4 pb-4">
+                                
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-4">
+                                        <div class="info-box">
+                                            <div class="info-title"><i class="bi bi-clock"></i> Horários da Sessão</div>
+                                            <div class="small text-dark mb-2">
+                                                <span class="text-muted fw-semibold">Início:</span> {{ sessao.data_hora_iniciado[8:10] }}/{{ sessao.data_hora_iniciado[5:7] }}/{{ sessao.data_hora_iniciado[0:4] }} às {{ sessao.data_hora_iniciado[11:16] }}
+                                            </div>
+                                            <div class="small text-dark">
+                                                <span class="text-muted fw-semibold">Fim:</span> {{ sessao.data_hora_finalizacao[8:10] }}/{{ sessao.data_hora_finalizacao[5:7] }}/{{ sessao.data_hora_finalizacao[0:4] }} às {{ sessao.data_hora_finalizacao[11:16] }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <div class="info-box">
+                                            <div class="info-title"><i class="bi bi-person-badge"></i> Equipe Responsável</div>
+                                            <div class="small text-dark mb-2">
+                                                <span class="text-muted fw-semibold">Aluno(a):</span> {{ sessao.aluno_responsavel }}
+                                            </div>
+                                            <div class="small text-dark">
+                                                <span class="text-muted fw-semibold">Supervisor(a):</span> {{ sessao.professor_supervisor }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <div class="info-box" style="background-color: var(--primary-white); border: 1px solid var(--primary-purple);">
+                                            {% if sessao.data_hora_retorno %}
+                                                <div class="info-title"><i class="bi bi-calendar-plus" style="color: var(--primary-purple);"></i> Próximo Retorno</div>
+                                                <div class="small text-dark mb-2 fw-semibold">
+                                                    {{ sessao.data_hora_retorno[8:10] }}/{{ sessao.data_hora_retorno[5:7] }}/{{ sessao.data_hora_retorno[0:4] }} às {{ sessao.data_hora_retorno[11:16] }}
+                                                </div>
+                                                
+                                                <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                                                    <span class="badge bg-light text-dark border">{{ sessao.status_retorno }}</span>
+                                                    
+                                                    {% if sessao.status_retorno == 'Agendado' %}
+                                                    <button class="btn btn-sm btn-link text-decoration-none p-0 text-dark fw-semibold" data-bs-toggle="collapse" data-bs-target="#editRetorno{{ sessao.id }}">
+                                                        <i class="bi bi-pencil-square"></i> Alterar
+                                                    </button>
+                                                    {% endif %}
+                                                </div>
+
+                                                {% if sessao.status_retorno == 'Agendado' %}
+                                                <div class="collapse mt-2" id="editRetorno{{ sessao.id }}">
+                                                    <form action="/sessao/{{ sessao.id }}/editar_retorno" method="POST" class="pt-2">
+                                                        <input type="datetime-local" name="data_hora_retorno" class="form-control form-control-sm mb-2" required>
+                                                        <button type="submit" class="btn btn-dark btn-sm w-100">Atualizar</button>
+                                                    </form>
+                                                </div>
+                                                {% endif %}
+                                            {% else %}
+                                                <div class="d-flex h-100 align-items-center justify-content-center text-muted small fst-italic">
+                                                    <i class="bi bi-calendar-x me-2"></i> Sem retorno agendado.
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h6 class="section-title">
+                                        <i class="bi bi-clipboard2-pulse" style="color: var(--primary-purple);"></i> Ações Realizadas
+                                    </h6>
+                                    <div class="info-box bg-white">
+                                        <p class="text-secondary small mb-0 lh-lg" style="white-space: pre-line;">{{ sessao.acoes_realizadas }}</p>
+                                    </div>
+                                </div>
+
+                                {% if sessao.foto_antes or sessao.foto_depois %}
+                                <div class="mb-4">
+                                    <h6 class="section-title">
+                                        <i class="bi bi-images" style="color: var(--primary-purple);"></i> Registro Fotográfico
+                                    </h6>
+                                    <div class="row g-4 mt-1">
+                                        {% if sessao.foto_antes %}
+                                        <div class="col-md-5 col-lg-4">
+                                            <div class="photo-card">
+                                                <div class="photo-label antes">Antes</div>
+                                                <img src="/static/uploads/{{ sessao.foto_antes }}" class="photo-img" alt="Foto Antes">
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if sessao.foto_depois %}
+                                        <div class="col-md-5 col-lg-4">
+                                            <div class="photo-card">
+                                                <div class="photo-label depois">Depois</div>
+                                                <img src="/static/uploads/{{ sessao.foto_depois }}" class="photo-img" alt="Foto Depois">
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <h6 class="section-title">Receitas e Recomendações</h6>
+                                        <div class="info-box bg-white">
+                                            <p class="text-secondary small mb-0">{{ sessao.receitas_recomendadas or 'Nenhuma recomendação preenchida.' }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="section-title">Observações da Execução</h6>
+                                        <div class="info-box bg-white">
+                                            <p class="text-secondary small mb-0">{{ sessao.observacoes_execucao or 'Sem intercorrências registradas.' }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="obs-final-box">
+                                    <i class="bi bi-stars fs-4" style="color: var(--primary-purple);"></i>
+                                    <div>
+                                        <strong class="text-uppercase small d-block mb-1" style="color: var(--primary-black); letter-spacing: 1px;">Evolução / Parecer Final</strong>
+                                        <span class="fw-medium small lh-base text-secondary">{{ sessao.observacao_final }}</span>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-folder2-open display-4 mb-3 d-block" style="color: var(--primary-purple);"></i>
+                        <h5 class="fw-bold text-dark">Nenhuma sessão registrada</h5>
+                        <p class="mb-0">Este plano de tratamento ainda não possui sessões executadas.</p>
+                    </div>
                 {% endif %}
             </div>
         </div>
-    </div>
-</div>
+    </main>
 
-<div class="row">
-    {% if sessoes %}
-        {% for sessao in sessoes %}
-        <div class="col-12 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Sessão #{{ sessao.numero_sessao }}</h5>
-                    <small>Executada em: {{ sessao.data_hora_iniciado[:10] }}</small>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <strong>Início:</strong> {{ sessao.data_hora_iniciado[8:10] }}/{{ sessao.data_hora_iniciado[5:7] }}/{{ sessao.data_hora_iniciado[0:4] }} às {{ sessao.data_hora_iniciado[11:16] }}<br>
-                            <strong>Fim:</strong> {{ sessao.data_hora_finalizacao[8:10] }}/{{ sessao.data_hora_finalizacao[5:7] }}/{{ sessao.data_hora_finalizacao[0:4] }} às {{ sessao.data_hora_finalizacao[11:16] }}
-                        </div>
-                        <div class="col-md-4">
-                            <strong>Aluno(a):</strong> {{ sessao.aluno_responsavel }}<br>
-                            <strong>Supervisor(a):</strong> {{ sessao.professor_supervisor }}
-                        </div>
-                        <div class="col-md-4 text-end">
-                            {% if sessao.data_hora_retorno %}
-                                <div class="p-2 border rounded {{ 'bg-warning-subtle border-warning' if sessao.status_retorno == 'Agendado' else 'bg-success-subtle border-success' }}">
-                                    <strong>Próximo Retorno:</strong><br> 
-                                    {{ sessao.data_hora_retorno[8:10] }}/{{ sessao.data_hora_retorno[5:7] }}/{{ sessao.data_hora_retorno[0:4] }} às {{ sessao.data_hora_retorno[11:16] }}<br>
-                                    <span class="badge {{ 'bg-warning text-dark' if sessao.status_retorno == 'Agendado' else 'bg-success' }}">
-                                        Status: {{ sessao.status_retorno }}
-                                    </span>
-                                    
-                                    {% if sessao.status_retorno == 'Agendado' %}
-                                    <div class="mt-2 text-start">
-                                        <button class="btn btn-xs btn-outline-dark w-100" data-bs-toggle="collapse" data-bs-target="#editRetorno{{ sessao.id }}">Alterar Data</button>
-                                        <div class="collapse mt-2" id="editRetorno{{ sessao.id }}">
-                                            <form action="/sessao/{{ sessao.id }}/editar_retorno" method="POST">
-                                                <input type="datetime-local" name="data_hora_retorno" class="form-control form-control-sm mb-1" required>
-                                                <button type="submit" class="btn btn-sm btn-dark w-100">Salvar Nova Data</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            {% else %}
-                                <span class="text-muted fst-italic">Nenhum retorno agendado.</span>
-                            {% endif %}
-                        </div>
-                    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-                    <div class="mb-3">
-                        <h6 class="border-bottom pb-1">Ações Realizadas</h6>
-                        <p class="text-muted">{{ sessao.acoes_realizadas }}</p>
-                    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.getElementById('toggle-btn');
+            const sidebar = document.getElementById('sidebar');
 
-                    {% if sessao.foto_antes or sessao.foto_depois %}
-                    <div class="mb-3">
-                        <h6 class="border-bottom pb-1"><i class="bi bi-images"></i> Registro Fotográfico</h6>
-                        <div class="row g-3">
-                            {% if sessao.foto_antes %}
-                            <div class="col-md-6 col-lg-4">
-                                <div class="card h-100 border-light bg-light">
-                                    <div class="card-header py-1 small text-center text-muted fw-bold">Antes</div>
-                                    <img src="/static/uploads/{{ sessao.foto_antes }}" class="img-fluid rounded-bottom card-img-bottom object-fit-cover" style="max-height: 250px;" alt="Foto Antes">
-                                </div>
-                            </div>
-                            {% endif %}
-                            {% if sessao.foto_depois %}
-                            <div class="col-md-6 col-lg-4">
-                                <div class="card h-100 border-light bg-light">
-                                    <div class="card-header py-1 small text-center text-muted fw-bold">Depois</div>
-                                    <img src="/static/uploads/{{ sessao.foto_depois }}" class="img-fluid rounded-bottom card-img-bottom object-fit-cover" style="max-height: 250px;" alt="Foto Depois">
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <h6 class="border-bottom pb-1">Receitas e Recomendações</h6>
-                            <p class="text-muted">{{ sessao.receitas_recomendadas or 'Nenhuma recomendação.' }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="border-bottom pb-1">Observações da Execução</h6>
-                            <p class="text-muted">{{ sessao.observacoes_execucao or 'Sem intercorrências.' }}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="alert alert-success py-2 mb-0">
-                        <strong>Evolução / Obs Final:</strong> {{ sessao.observacao_final }}
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="col-12">
-            <div class="alert alert-info text-center">Nenhuma sessão executada para este procedimento até o momento.</div>
-        </div>
-    {% endif %}
-</div>
-{% endblock %}
+            toggleBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('collapsed');
+            });
+        });
+    </script>
+</body>
+</html>

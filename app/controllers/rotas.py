@@ -29,13 +29,27 @@ def index():
     receita_total = float(receita_bruta) if receita_bruta else 0.0
     receita_formatada = "{:,.2f}".format(receita_total).replace(',', 'X').replace('.', ',').replace('X', '.')
 
+    # 4. Busca os agendamentos de hoje (NOVA LÓGICA)
+    today_str = now.strftime("%Y-%m-%d")
+    agendamentos_hoje_db = conn.execute(
+        """
+        SELECT p.nome_completo, a.data_hora, a.tipo_procedimento
+        FROM agendamentos a
+        JOIN pacientes p ON a.paciente_id = p.id
+        WHERE a.data_hora LIKE ?
+        ORDER BY a.data_hora ASC
+        """,
+        (f"{today_str}%",)
+    ).fetchall()
+    
     conn.close()
 
     # Envia todos esses dados para o seu index.html
     return render_template('index.html', 
                            total_pacientes=total_pacientes, 
                            agendamentos_pendentes=agendamentos_pendentes, 
-                           receita_total=receita_formatada)
+                           receita_total=receita_formatada,
+                           agendamentos_hoje=agendamentos_hoje_db) # Passando os dados novos
 
 #2. Rota da lista de pacientes
 @rotas_bp.route('/pacientes')
